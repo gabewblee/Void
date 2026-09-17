@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ast.h"
-#include "lexer.h"
+#include <ast.h>
+#include <lexer.h>
 
 typedef struct {
     Lexer *lexer;     /* Current lexer */

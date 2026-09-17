@@ -14,6 +14,7 @@ typedef enum {
     TOKEN_MINUS,      /* -          */
     TOKEN_STAR,       /* *          */
     TOKEN_SLASH,      /* /          */
+    TOKEN_EQUAL,      /* =          */
     TOKEN_EOF         /* EOF        */
 } TokenType;
 

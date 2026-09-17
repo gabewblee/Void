@@ -1,8 +1,7 @@
 #pragma once
 
+#include <parser.h>
 #include <stdio.h>
-
-#include "parser.h"
 
 /**
  * gen - Generates assembly program for @program in @out.

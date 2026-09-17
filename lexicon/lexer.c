@@ -1,9 +1,8 @@
 #include <ctype.h>
+#include <lexer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "lexer.h"
 
 static inline Token tokenize(TokenType type, char *start, int len) {
     return (Token){
@@ -14,7 +13,7 @@ static inline Token tokenize(TokenType type, char *start, int len) {
 }
 
 static inline int match(char* start, int len, char *keyword) {
-    return (len == (int)strlen(keyword)) && strncmp(start, keyword, len) == 0;
+    return (len == (int)strlen(keyword)) && !strncmp(start, keyword, len);
 }
 
 static inline void handle_blank(Lexer *lexer) {
@@ -86,8 +85,10 @@ Token lexer_get_nxt_token(Lexer *lexer) {
         return tokenize(TOKEN_STAR, peek, 1);
     case '/':
         return tokenize(TOKEN_SLASH, peek, 1);
+    case '=':
+        return tokenize(TOKEN_EQUAL, peek, 1);
     default:
-        fprintf(stderr,"Error: Unexpected character '%c'\n", c);
+        fprintf(stderr,"Error: Failed to tokenize character '%c'.\n", c);
         exit(EXIT_FAILURE);
     }
 }

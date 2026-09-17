@@ -1,9 +1,9 @@
+#include <gen.h>
+#include <lexer.h>
+#include <parser.h>
+#include <resolver.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "gen.h"
-#include "lexer.h"
-#include "parser.h"
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -52,7 +52,14 @@ int main(int argc, char **argv) {
     parser_init(&parser, &lexer);
 
     Program *program = parse(&parser);
+
+    Resolver resolver;
+    resolver_init(&resolver);
+    resolve(&resolver, program);
+
     gen(stdout, program);
+
+    resolver_free(&resolver);
     parser_free(program);
     free(buf);
     return EXIT_SUCCESS;

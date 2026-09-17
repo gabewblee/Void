@@ -1,10 +1,12 @@
 CC     = cc
-CFLAGS = -Wall -Wextra -Werror -std=c11 -g -Iinclude
-SRC    = ast.c    \
-         gen.c    \
-         lexer.c  \
-         main.c   \
-         parser.c \
+CFLAGS = -Wall -Wextra -Werror -std=c11 -g -Ibackend -Ilexicon -Isemantic -Isyntax
+SRC    = backend/gen.c       \
+         lexicon/lexer.c     \
+         semantic/resolver.c \
+         semantic/symtbl.c   \
+         syntax/ast.c        \
+         syntax/parser.c     \
+         main.c
 
 .PHONY: all clean
 
