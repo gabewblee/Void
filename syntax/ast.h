@@ -63,8 +63,9 @@ struct Block {
 typedef struct Function Function;
 
 struct Function {
-    char  *name; /* Function name */
-    Block *body; /* Function body */
+    char  *name;  /* Function name       */
+    Block *body;  /* Function body       */
+    int    stack; /* Function stack size */
 };
 
 typedef struct Program Program;

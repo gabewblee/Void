@@ -95,6 +95,7 @@ static void resolve_block(Resolver *resolver, Block *block) {
 static void resolve_function(Resolver *resolver, Function *function) {
     resolver->nxt_stack_offset = -4;
     resolve_block(resolver, function->body);
+    function->stack = -resolver->nxt_stack_offset - 4;
 }
 
 void resolve(Resolver *resolver, Program *program) {

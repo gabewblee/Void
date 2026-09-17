@@ -143,6 +143,7 @@ static void gen_function(FILE *out, Function *function) {
     fprintf(out, "%s:\n", function->name);
     fprintf(out, "    push rbp\n");
     fprintf(out, "    mov rbp, rsp\n");
+    fprintf(out, "    sub rsp, %d\n", function->stack);
     gen_block(out, function->body);
     fprintf(out, ".return:\n");
     fprintf(out, "    mov rsp, rbp\n");

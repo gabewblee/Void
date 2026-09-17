@@ -191,8 +191,9 @@ Function *ast_build_function_node(char *name, Block *body) {
         exit(EXIT_FAILURE);
     }
 
-    function->name = name;
-    function->body = body;
+    function->name  = name;
+    function->body  = body;
+    function->stack = 0;
     return function;
 }
 
