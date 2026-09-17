@@ -4,10 +4,11 @@
 #include <symtbl.h>
 
 typedef enum {
-    EXPR_INTEGER,   /* Integer constant */
-    EXPR_UNARY,     /* Unary operation  */
-    EXPR_BINARY,    /* Binary operaton  */
-    EXPR_IDENTIFIER /* Identifier       */
+    EXPR_INTEGER,    /* Integer constant    */
+    EXPR_UNARY,      /* Unary operation     */
+    EXPR_BINARY,     /* Binary operaton     */
+    EXPR_IDENTIFIER, /* Identifier          */
+    EXPR_ASSIGNMENT  /* Variable assignment */
 } ExprType;
 
 typedef struct Expr Expr;
@@ -29,6 +30,10 @@ struct Expr {
             char   *name;
             Symbol *symbol;
         } identifier;
+        struct {
+            Expr *target;
+            Expr *val;
+        } assignment;
     };
 };
 
@@ -104,6 +109,14 @@ Expr *ast_build_binary_expr_node(TokenType op, Expr *left, Expr *right);
  * Returns: The identifier expression node.
  */
 Expr *ast_build_identifier_expr_node(char *name);
+
+/**
+ * ast_build_assignment_expr_node - Builds an assignment expression node.
+ * @target: The node's target.
+ * @val: The node's value.
+ * Returns: The assignment expression node.
+ */
+Expr *ast_build_assignment_expr_node(Expr *target, Expr *val);
 
 /**
  * ast_build_return_stmt_node - Builds a return statement node.

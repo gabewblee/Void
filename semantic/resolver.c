@@ -53,6 +53,16 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         expr->identifier.symbol = symbol;
         return;
     }
+    case EXPR_ASSIGNMENT: {
+        if (expr->assignment.target->type != EXPR_IDENTIFIER) {
+            fprintf(stderr, "Error: Invalid assignment target.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        resolve_expr(resolver, expr->assignment.target);
+        resolve_expr(resolver, expr->assignment.val);
+        return;
+    }
     default:
         fprintf(stderr, "Error: Failed to resolve expression type '%d'.\n", expr->type);
         exit(EXIT_FAILURE);

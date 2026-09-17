@@ -4,14 +4,23 @@
 static void gen_expr(FILE *out, Expr *expr) {
     switch (expr->type) {
     case EXPR_INTEGER:
+        /*
+         *     mov eax
+         */
         fprintf(out, "    mov eax, %ld\n", expr->integer);
         return;
     case EXPR_UNARY:
+        /*
+         * gen_expr(out, expr->unary.operand)
+         */
         gen_expr(out, expr->unary.operand);
         switch (expr->unary.op) {
         case TOKEN_PLUS:
             return;
         case TOKEN_MINUS:
+            /*
+             *     neg eax
+             */
             fprintf(out, "    neg eax\n");
             return;
         default:
@@ -70,7 +79,19 @@ static void gen_expr(FILE *out, Expr *expr) {
         }
         break;
     case EXPR_IDENTIFIER:
+        /*
+         *     mov eax, dword [rbp+expr->identifier.symbol->offset]
+         */
         fprintf(out, "    mov eax, dword [rbp%+d]\n", expr->identifier.symbol->offset);
+        return;
+    case EXPR_ASSIGNMENT:
+        /*
+         * gen_expr(out, expr->assignment.val)
+         *     mov dword [rbp+expr->assignment.target->identifier.symbol->offset], eax
+         */
+        gen_expr(out, expr->assignment.val);
+        fprintf(out, "    mov dword [rbp%+d], eax\n", expr->assignment.target->identifier.symbol->offset);
+
         return;
     }
 

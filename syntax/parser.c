@@ -80,7 +80,7 @@ static Expr *parse_term(Parser *parser) {
     return left;
 }
 
-static Expr *parse_expr(Parser *parser) {
+static Expr *parse_additive_expr(Parser *parser) {
     /* expr -> term ((+ | -) term)* */
     Expr *left = parse_term(parser);
     while (parser->lookahead.type == TOKEN_PLUS || parser->lookahead.type == TOKEN_MINUS) {
@@ -92,6 +92,26 @@ static Expr *parse_expr(Parser *parser) {
     }
 
     return left;
+}
+
+static Expr *parse_assignment_expr(Parser *parser) {
+    Expr *expr = parse_additive_expr(parser);
+    if (parser->lookahead.type == TOKEN_EQUAL) {
+        if (expr->type != EXPR_IDENTIFIER) {
+            fprintf(stderr, "Error: Invalid assignment target.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        match(parser, TOKEN_EQUAL);
+        Expr *val = parse_assignment_expr(parser);
+        return ast_build_assignment_expr_node(expr, val);
+    }
+
+    return expr;
+}
+
+static Expr *parse_expr(Parser *parser) {
+    return parse_assignment_expr(parser);
 }
 
 static Stmt *parse_return_stmt(Parser *parser) {

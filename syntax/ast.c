@@ -37,6 +37,9 @@ static void ast_free_expr_node(Expr *expr) {
         case EXPR_IDENTIFIER:
             ast_free_name(expr->identifier.name);
             break;
+        case EXPR_ASSIGNMENT:
+            ast_free_expr_node(expr->assignment.target);
+            ast_free_expr_node(expr->assignment.val);
     }
 
     free(expr);
@@ -131,6 +134,13 @@ Expr *ast_build_identifier_expr_node(char *name) {
     Expr *expr = ast_build_expr_node(EXPR_IDENTIFIER);
     expr->identifier.name   = name;
     expr->identifier.symbol = NULL;
+    return expr;
+}
+
+Expr *ast_build_assignment_expr_node(Expr *target, Expr *val) {
+    Expr *expr = ast_build_expr_node(EXPR_ASSIGNMENT);
+    expr->assignment.target = target;
+    expr->assignment.val    = val;
     return expr;
 }
 
