@@ -23,6 +23,16 @@ static void gen_expr(FILE *out, Expr *expr) {
              */
             fprintf(out, "    neg eax\n");
             return;
+        case TOKEN_NOT:
+            /*
+             *     test eax, eax # Zero flag = 1 if eax == 0
+             *     sete al       # al = 1 if zero flag == 1
+             *     movzx eax, al # Zero extend eax with al as its lower byte
+             */
+            fprintf(out, "    test eax, eax\n");
+            fprintf(out, "    sete al\n");
+            fprintf(out, "    movzx eax, al\n");
+            return;
         default:
             break;
         }
@@ -73,6 +83,66 @@ static void gen_expr(FILE *out, Expr *expr) {
             fprintf(out, "    mov eax, ecx\n");
             fprintf(out, "    cdq\n");
             fprintf(out, "    idiv esi\n");
+            return;
+        case TOKEN_LESS:
+            /*
+             *     cmp ecx, eax
+             *     setl al
+             *     movzx eax, al
+             */
+            fprintf(out, "    cmp ecx, eax\n");
+            fprintf(out, "    setl al\n");
+            fprintf(out, "    movzx eax, al\n");
+            return;
+        case TOKEN_LEQ:
+            /*
+             *     cmp ecx, eax
+             *     setle al
+             *     movzx eax, al
+             */
+            fprintf(out, "    cmp ecx, eax\n");
+            fprintf(out, "    setle al\n");
+            fprintf(out, "    movzx eax, al\n");
+            return;
+        case TOKEN_EQ_EQ:
+            /*
+             *     cmp ecx, eax
+             *     sete al
+             *     movzx eax, al
+             */
+            fprintf(out, "    cmp ecx, eax\n");
+            fprintf(out, "    sete al\n");
+            fprintf(out, "    movzx eax, al\n");
+            return;
+        case TOKEN_GEQ:
+            /*
+             *     cmp ecx, eax
+             *     setge al
+             *     movzx eax, al
+             */
+            fprintf(out, "    cmp ecx, eax\n");
+            fprintf(out, "    setge al\n");
+            fprintf(out, "    movzx eax, al\n");
+            return;
+        case TOKEN_GREATER:
+            /*
+             *     cmp ecx, eax
+             *     setg al
+             *     movzx eax, al
+             */
+            fprintf(out, "    cmp ecx, eax\n");
+            fprintf(out, "    setg al\n");
+            fprintf(out, "    movzx eax, al\n");
+            return;
+        case TOKEN_NEQ:
+            /*
+             *     cmp eax, ecx
+             *     setne al
+             *     movzx eax, al
+             */
+            fprintf(out, "    cmp ecx, eax\n");
+            fprintf(out, "    setne al\n");
+            fprintf(out, "    movzx eax, al\n");
             return;
         default:
             break;

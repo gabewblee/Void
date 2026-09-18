@@ -23,7 +23,7 @@ static inline void handle_blank(Lexer *lexer) {
 
 static Token handle_ident(Lexer *lexer) {
     char *start = lexer->peek;
-    while (isalpha((unsigned char)*lexer->peek) || *lexer->peek == '_')
+    while (isalnum((unsigned char)*lexer->peek) || *lexer->peek == '_')
         lexer->peek++;
 
     int len = lexer->peek - start;
@@ -86,7 +86,29 @@ Token lexer_get_nxt_token(Lexer *lexer) {
     case '/':
         return tokenize(TOKEN_SLASH, peek, 1);
     case '=':
-        return tokenize(TOKEN_EQUAL, peek, 1);
+        if (*lexer->peek != '=')
+            return tokenize(TOKEN_EQ, peek, 1);
+        
+        lexer->peek++;
+        return tokenize(TOKEN_EQ_EQ, peek, 2);
+    case '<':
+        if (*lexer->peek != '=')
+            return tokenize(TOKEN_LESS, peek, 1);
+        
+        lexer->peek++;
+        return tokenize(TOKEN_LEQ, peek, 2);
+    case '>':
+        if (*lexer->peek != '=')
+            return tokenize(TOKEN_GREATER, peek, 1);
+
+        lexer->peek++;
+        return tokenize(TOKEN_GEQ, peek, 2);
+    case '!':
+        if (*lexer->peek != '=')
+            return tokenize(TOKEN_NOT, peek, 1);
+
+        lexer->peek++;
+        return tokenize(TOKEN_NEQ, peek, 2);
     default:
         fprintf(stderr,"Error: Failed to tokenize character '%c'.\n", c);
         exit(EXIT_FAILURE);
