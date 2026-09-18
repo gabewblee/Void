@@ -58,6 +58,7 @@ static void ast_free_decl_stmt_node(Stmt *stmt) {
 
     ast_free_name(stmt->decl.name);
     ast_free_expr_node(stmt->decl.initializer);
+    free(stmt->decl.symbol);
 }
 
 static void ast_free_expr_stmt_node(Stmt *stmt) {

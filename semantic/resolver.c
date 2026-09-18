@@ -100,6 +100,7 @@ static void resolve_block(Resolver *resolver, Block *block) {
     scope_init(resolver);
     for (int i = 0; i < block->cnt; i++)
         resolve_stmt(resolver, block->stmts[i]);
+    scope_free(resolver);
 }
 
 static void resolve_function(Resolver *resolver, Function *function) {
@@ -110,11 +111,6 @@ static void resolve_function(Resolver *resolver, Function *function) {
 
 void resolve(Resolver *resolver, Program *program) {
     resolve_function(resolver, program->function);
-}
-
-void resolver_free(Resolver *resolver) {
-    while (resolver->scope)
-        scope_free(resolver);
 }
 
 void resolver_init(Resolver *resolver) {

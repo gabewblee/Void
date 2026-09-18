@@ -115,7 +115,7 @@ static void gen_decl_stmt(FILE *out, Stmt *stmt) {
      */
     if (stmt->decl.initializer) {
         gen_expr(out, stmt->decl.initializer);
-        fprintf(out, "     mov dword [rbp%+d], eax\n", stmt->decl.symbol->offset);
+        fprintf(out, "    mov dword [rbp%+d], eax\n", stmt->decl.symbol->offset);
     }
 }
 
