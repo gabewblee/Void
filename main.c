@@ -59,7 +59,6 @@ int main(int argc, char **argv) {
 
     gen(stdout, program);
 
-    resolver_free(&resolver);
     parser_free(program);
     free(buf);
     return EXIT_SUCCESS;

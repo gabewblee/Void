@@ -23,12 +23,6 @@ struct Resolver {
 void resolve(Resolver *resolver, Program *program);
 
 /**
- * resolver_free - Frees the resolver's allocated memory.
- * @resolver: The resolver to free.
- */
-void resolver_free(Resolver *resolver);
-
-/**
  * resolver_init - Initializes the resolver.
  * @resolver: The resolver to initialize.
  */

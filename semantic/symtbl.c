@@ -44,9 +44,6 @@ Symbol *symbol_table_add(SymbolTable *table, char *name, int offset) {
 }
 
 void symbol_table_free(SymbolTable *table) {
-    for (int i = 0; i < table->len; i++)
-        free(table->items[i]);
-
     free(table->items);
 }
 
