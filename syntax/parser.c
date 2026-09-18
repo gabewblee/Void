@@ -30,7 +30,7 @@ static char *copy_token_lexeme(Token token) {
     return lexeme;
 }
 
-static Expr *parse_primary(Parser *parser) {
+static Expr *parse_primary_expr(Parser *parser) {
     /* primary -> number | id | (expr) */
     if (parser->lookahead.type == TOKEN_NUMBER) {
         long num = parser->lookahead.num;
@@ -55,39 +55,70 @@ static Expr *parse_primary(Parser *parser) {
     exit(EXIT_FAILURE);
 }
 
-static Expr *parse_unary(Parser *parser) {
-    /* unary -> (+ | -) unary | primary */
+static Expr *parse_unary_expr(Parser *parser) {
+    /* unary -> (+ | - | !) unary | primary */
     TokenType op = parser->lookahead.type;
-    if (op == TOKEN_PLUS || op == TOKEN_MINUS) {
+    if (op == TOKEN_PLUS || op == TOKEN_MINUS || op == TOKEN_NOT) {
         match(parser, op);
-        return ast_build_unary_expr_node(op, parse_unary(parser));
+        return ast_build_unary_expr_node(op, parse_unary_expr(parser));
     }
 
-    return parse_primary(parser);
+    return parse_primary_expr(parser);
 }
 
-static Expr *parse_term(Parser *parser) {
-    /* term -> unary ((* | /) unary)* */
-    Expr *left = parse_unary(parser);
+static Expr *parse_multiplicative_expr(Parser *parser) {
+    /* multiplicative -> unary ((* | /) unary)* */
+    Expr *left = parse_unary_expr(parser);
     while (parser->lookahead.type == TOKEN_STAR || parser->lookahead.type == TOKEN_SLASH) {
         TokenType op = parser->lookahead.type;
-        match(parser, op);
-
-        Expr *right = parse_unary(parser);
+        match(parser, parser->lookahead.type);
+        
+        Expr *right = parse_unary_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
     }
-    
+
     return left;
 }
 
 static Expr *parse_additive_expr(Parser *parser) {
-    /* expr -> term ((+ | -) term)* */
-    Expr *left = parse_term(parser);
+    /* additive -> multiplicative ((+ | -) multiplicative)* */
+    Expr *left = parse_multiplicative_expr(parser);
     while (parser->lookahead.type == TOKEN_PLUS || parser->lookahead.type == TOKEN_MINUS) {
         TokenType op = parser->lookahead.type;
         match(parser, op);
 
-        Expr *right = parse_term(parser);
+        Expr *right = parse_multiplicative_expr(parser);
+        left = ast_build_binary_expr_node(op, left, right);
+    }
+
+    return left;
+}
+
+static Expr *parse_relational_expr(Parser *parser) {
+    /* relational -> additive ((< | <= | > | >=) additive)* */
+    Expr *left = parse_additive_expr(parser);
+    while (parser->lookahead.type == TOKEN_LESS    || 
+           parser->lookahead.type == TOKEN_LEQ     ||
+           parser->lookahead.type == TOKEN_GREATER ||
+           parser->lookahead.type == TOKEN_GEQ) {
+        TokenType op = parser->lookahead.type;
+        match(parser, parser->lookahead.type);
+        
+        Expr *right = parse_additive_expr(parser);
+        left = ast_build_binary_expr_node(op, left, right);
+    }
+
+    return left;
+}
+
+static Expr *parse_equality_expr(Parser *parser) {
+    /* equality -> relational ((== | !=) relational)* */
+    Expr *left = parse_relational_expr(parser);
+    while (parser->lookahead.type == TOKEN_EQ_EQ || parser->lookahead.type == TOKEN_NEQ) {
+        TokenType op = parser->lookahead.type;
+        match(parser, parser->lookahead.type);
+        
+        Expr *right = parse_relational_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
     }
 
@@ -95,14 +126,15 @@ static Expr *parse_additive_expr(Parser *parser) {
 }
 
 static Expr *parse_assignment_expr(Parser *parser) {
-    Expr *expr = parse_additive_expr(parser);
-    if (parser->lookahead.type == TOKEN_EQUAL) {
+    /* assignment -> equality (= assignment)? */
+    Expr *expr = parse_equality_expr(parser);
+    if (parser->lookahead.type == TOKEN_EQ) {
         if (expr->type != EXPR_IDENTIFIER) {
-            fprintf(stderr, "Error: Invalid assignment target.\n");
+            fprintf(stderr, "Error: Expected expression type '%d', got '%d'.\n", EXPR_IDENTIFIER, expr->type);
             exit(EXIT_FAILURE);
         }
 
-        match(parser, TOKEN_EQUAL);
+        match(parser, TOKEN_EQ);
         Expr *val = parse_assignment_expr(parser);
         return ast_build_assignment_expr_node(expr, val);
     }
@@ -111,6 +143,7 @@ static Expr *parse_assignment_expr(Parser *parser) {
 }
 
 static Expr *parse_expr(Parser *parser) {
+    /* expr -> assignment */
     return parse_assignment_expr(parser);
 }
 
@@ -125,10 +158,11 @@ static Stmt *parse_return_stmt(Parser *parser) {
 static Stmt *parse_decl_stmt(Parser *parser) {
     /* decl_stmt -> int id (= expr)?; */
     match(parser, TOKEN_INT);
-    char *name = copy_token_lexeme(parser->lookahead);
+    Token ident = parser->lookahead;
     match(parser, TOKEN_IDENTIFIER);
-    if (parser->lookahead.type == TOKEN_EQUAL) {
-        match(parser, TOKEN_EQUAL);
+    char *name = copy_token_lexeme(ident);
+    if (parser->lookahead.type == TOKEN_EQ) {
+        match(parser, TOKEN_EQ);
         Expr *initializer = parse_expr(parser);
         match(parser, TOKEN_SEMICOLON);
         return ast_build_decl_stmt_node(name, initializer);
