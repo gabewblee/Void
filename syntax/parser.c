@@ -5,6 +5,7 @@
 
 static Expr *parse_expr(Parser *parser);
 static Stmt *parse_stmt(Parser *parser);
+static Block *parse_block(Parser *parser);
 
 static void advance(Parser *parser) {
     parser->lookahead = lexer_get_nxt_token(parser->lexer);
@@ -181,15 +182,21 @@ static Stmt *parse_decl_stmt(Parser *parser) {
 static Stmt *parse_if_stmt(Parser *parser) {
     /* if_stmt -> if (expr) stmt (else stmt)?*/
     match(parser, TOKEN_IF);
+    match(parser, TOKEN_LPAREN);
     Expr *condition = parse_expr(parser);
-    Stmt *consequent = parse_stmt(parser);
-    Stmt *alternate = NULL;
+    match(parser, TOKEN_RPAREN);
+    Stmt *then_branch = parse_stmt(parser);
+    Stmt *else_branch = NULL;
     if (parser->lookahead.type == TOKEN_ELSE) {
         match(parser, TOKEN_ELSE);
-        alternate = parse_stmt(parser);
+        else_branch = parse_stmt(parser);
     }
     
-    return ast_build_if_stmt_node(condition, consequent, alternate);
+    return ast_build_if_stmt_node(condition, then_branch, else_branch);
+}
+
+static Stmt *parse_block_stmt(Parser *parser) {
+    return ast_build_block_stmt_node(parse_block(parser));
 }
 
 static Stmt *parse_expr_stmt(Parser *parser) {
@@ -200,7 +207,7 @@ static Stmt *parse_expr_stmt(Parser *parser) {
 }
 
 static Stmt *parse_stmt(Parser *parser) {
-    /* stmt -> ret_stmt | decl_stmt | if_stmt | expr_stmt */
+    /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | expr_stmt */
     switch (parser->lookahead.type) {
     case TOKEN_RET:
         return parse_ret_stmt(parser);
@@ -208,6 +215,8 @@ static Stmt *parse_stmt(Parser *parser) {
         return parse_decl_stmt(parser);
     case TOKEN_IF:
         return parse_if_stmt(parser);
+    case TOKEN_LBRACE:
+        return parse_block_stmt(parser);
     default:
         return parse_expr_stmt(parser);
     }

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 static void ast_free_stmt_node(Stmt *stmt);
+static void ast_free_block_node(Block *block);
 
 static Expr *ast_build_expr_node(ExprType type) {
     Expr *expr = malloc(sizeof(Expr));
@@ -92,6 +93,9 @@ static void ast_free_stmt_node(Stmt *stmt) {
         break;
     case STMT_IF:
         ast_free_if_stmt_node(stmt);
+        break;
+    case STMT_BLOCK:
+        ast_free_block_node(stmt->block_stmt);
         break;
     case STMT_EXPR:
         ast_free_expr_stmt_node(stmt);
@@ -196,6 +200,18 @@ Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then, Stmt *otherwise) {
     stmt->if_stmt.cond        = cond;
     stmt->if_stmt.then_branch = then;
     stmt->if_stmt.else_branch = otherwise;
+    return stmt;
+}
+
+Stmt *ast_build_block_stmt_node(Block *block) {
+    Stmt *stmt = malloc(sizeof(Stmt));
+    if (!stmt) {
+        fprintf(stderr, "Error: Failed to build block statement node. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    stmt->type       = STMT_BLOCK;
+    stmt->block_stmt = block;
     return stmt;
 }
 

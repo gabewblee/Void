@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static void resolve_block(Resolver *resolver, Block *block);
+
 static void scope_init(Resolver *resolver) {
     Scope *scope = malloc(sizeof(Scope));
     if (!scope) {
@@ -91,6 +93,9 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
         resolve_expr(resolver, stmt->if_stmt.cond);
         resolve_stmt(resolver, stmt->if_stmt.then_branch);
         resolve_stmt(resolver, stmt->if_stmt.else_branch);
+        return;
+    case STMT_BLOCK:
+        resolve_block(resolver, stmt->block_stmt);
         return;
     case STMT_EXPR:
         resolve_expr(resolver, stmt->expr_stmt);

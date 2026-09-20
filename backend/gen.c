@@ -4,6 +4,7 @@
 static int label = 0;
 
 static void gen_stmt(FILE *out, Stmt *stmt);
+static void gen_block(FILE *out, Block *block);
 
 static int gen_label() {
     return label++;
@@ -249,6 +250,9 @@ static void gen_stmt(FILE *out, Stmt *stmt) {
         return;
     case STMT_IF:
         gen_if_stmt(out, stmt);
+        return;
+    case STMT_BLOCK:
+        gen_block(out, stmt->block_stmt);
         return;
     case STMT_EXPR:
         gen_expr_stmt(out, stmt);

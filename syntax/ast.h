@@ -41,10 +41,12 @@ typedef enum {
     STMT_RETURN, /* Return statement      */
     STMT_DECL,   /* Declaration statement */
     STMT_IF,     /* If statement          */
+    STMT_BLOCK,  /* Block statement       */
     STMT_EXPR    /* Expression statement  */
 } StmtType;
 
 typedef struct Stmt Stmt;
+typedef struct Block Block;
 
 struct Stmt {
     StmtType type; /* Statement type */
@@ -60,11 +62,10 @@ struct Stmt {
             Stmt *then_branch; /* Then branch  */
             Stmt *else_branch; /* Else branch  */
         } if_stmt;
+        Block *block_stmt;
         Expr *expr_stmt; /* Expression value */
     };
 };
-
-typedef struct Block Block;
 
 struct Block {
     Stmt **stmts; /* Statement list  */
@@ -142,11 +143,18 @@ Stmt *ast_build_decl_stmt_node(char *name, Expr *initializer);
 /**
  * ast_build_if_stmt_node - Builds an if statement node.
  * @cond: The if condition.
- * @then: The then branch.
- * @otherwise: The else branch.
+ * @then_branch: The then branch.
+ * @else_branch: The else branch.
  * Returns: The if statement node.
  */
-Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then, Stmt *otherwise);
+Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then_branch, Stmt *else_branch);
+
+/**
+ * ast_build_block_stmt_node - Builds a block statement node.
+ * @block: The block node.
+ * @Returns: The block statement node.
+ */
+Stmt *ast_build_block_stmt_node(Block *block);
 
 /**
  * ast_build_expr_stmt_node - Builds a expression statement node.
