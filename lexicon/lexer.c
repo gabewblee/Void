@@ -42,6 +42,12 @@ static Token handle_id(Lexer *lexer) {
     if (match(start, len, "while"))
         return tokenize(TOKEN_WHILE, start, len);
 
+    if (match(start, len, "break"))
+        return tokenize(TOKEN_BREAK, start, len);
+
+    if (match(start, len, "continue"))
+        return tokenize(TOKEN_CONTINUE, start, len);
+
     return tokenize(TOKEN_ID, start, len);
 }
 

@@ -1,7 +1,15 @@
 #include <gen.h>
 #include <stdlib.h>
 
-static int label = 0;
+typedef struct LoopCtx LoopCtx;
+
+struct LoopCtx {
+    int      label;
+    LoopCtx *parent;
+};
+
+static int      label = 0;
+static LoopCtx *ctx   = NULL;
 
 static void gen_stmt(FILE *out, Stmt *stmt);
 static void gen_block(FILE *out, Block *block);
@@ -10,6 +18,7 @@ static int gen_label() {
     return label++;
 }
 
+/* The invariant for expressions is that results are placed in rax */
 static void gen_expr(FILE *out, Expr *expr) {
     switch (expr->type) {
     case EXPR_INT:
@@ -170,7 +179,6 @@ static void gen_expr(FILE *out, Expr *expr) {
          */
         gen_expr(out, expr->assign.val);
         fprintf(out, "    mov dword [rbp%+d], eax\n", expr->assign.target->id.symbol->offset);
-
         return;
     }
 
@@ -244,6 +252,12 @@ static void gen_while_stmt(FILE *out, Stmt *stmt) {
      * .Ldonelabel:
      */
     int label = gen_label();
+    LoopCtx loop = {
+        .label  = label,
+        .parent = ctx
+    };
+
+    ctx = &loop;
     fprintf(out, ".Lwhile%d:\n", label);
     gen_expr(out, stmt->while_stmt.cond);
     fprintf(out, "    test eax, eax\n");
@@ -251,6 +265,21 @@ static void gen_while_stmt(FILE *out, Stmt *stmt) {
     gen_stmt(out, stmt->while_stmt.body);
     fprintf(out, "    jmp .Lwhile%d\n", label);
     fprintf(out, ".Ldone%d:\n", label);
+    ctx = loop.parent;
+}
+
+static void gen_break_stmt(FILE *out) {
+    /*
+     *     jmp .Ldonelabel
+     */
+    fprintf(out, "    jmp .Ldone%d\n", ctx->label);
+}
+
+static void gen_continue_stmt(FILE *out) {
+    /*
+     *     jmp .Lwhilelabel
+     */
+    fprintf(out, "    jmp .Lwhile%d\n", ctx->label);
 }
 
 static void gen_expr_stmt(FILE *out, Stmt *stmt) {
@@ -276,6 +305,12 @@ static void gen_stmt(FILE *out, Stmt *stmt) {
         return;
     case STMT_WHILE:
         gen_while_stmt(out, stmt);
+        return;
+    case STMT_BREAK:
+        gen_break_stmt(out);
+        return;
+    case STMT_CONTINUE:
+        gen_continue_stmt(out);
         return;
     case STMT_EXPR:
         gen_expr_stmt(out, stmt);
@@ -322,4 +357,12 @@ void gen(FILE *out, Program *program) {
      */
     fprintf(out, "section .text\n");
     gen_function(out, program->function);
+}
+
+void gen_free() {
+    for (LoopCtx *cur = ctx; cur;) {
+        LoopCtx *parent = cur->parent;
+        free(cur);
+        cur = parent;
+    }
 }

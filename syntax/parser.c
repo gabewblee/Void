@@ -209,6 +209,20 @@ static Stmt *parse_while_stmt(Parser *parser) {
     return ast_build_while_stmt_node(cond, body);
 }
 
+static Stmt *parse_break_stmt(Parser *parser) {
+    /* break_stmt -> break; */
+    match(parser, TOKEN_BREAK);
+    match(parser, TOKEN_SEMICOLON);
+    return ast_build_break_stmt_node();
+}
+
+static Stmt *parse_continue_stmt(Parser *parser) {
+    /* continue_stmt -> continue; */
+    match(parser, TOKEN_CONTINUE);
+    match(parser, TOKEN_SEMICOLON);
+    return ast_build_continue_stmt_node();
+}
+
 static Stmt *parse_expr_stmt(Parser *parser) {
     /* expr_stmt -> expr; */
     Expr *expr = parse_expr(parser);
@@ -217,7 +231,7 @@ static Stmt *parse_expr_stmt(Parser *parser) {
 }
 
 static Stmt *parse_stmt(Parser *parser) {
-    /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | while_stmt | expr_stmt */
+    /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | while_stmt | break_stmt | continue_stmt | expr_stmt */
     switch (parser->lookahead.type) {
     case TOKEN_RET:
         return parse_ret_stmt(parser);
@@ -229,6 +243,10 @@ static Stmt *parse_stmt(Parser *parser) {
         return parse_block_stmt(parser);
     case TOKEN_WHILE:
         return parse_while_stmt(parser);
+    case TOKEN_BREAK:
+        return parse_break_stmt(parser);
+    case TOKEN_CONTINUE:
+        return parse_continue_stmt(parser);
     default:
         return parse_expr_stmt(parser);
     }
@@ -267,7 +285,6 @@ static Block *parse_block(Parser *parser) {
 
 static Function *parse_function(Parser *parser) {
     /* function -> int id() block */
-
     match(parser, TOKEN_INT);
 
     Token lookahead = parser->lookahead;

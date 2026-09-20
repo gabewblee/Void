@@ -38,12 +38,14 @@ struct Expr {
 };
 
 typedef enum {
-    STMT_RETURN, /* Return statement      */
-    STMT_DECL,   /* Declaration statement */
-    STMT_IF,     /* If statement          */
-    STMT_BLOCK,  /* Block statement       */
-    STMT_WHILE,  /* While statement       */
-    STMT_EXPR    /* Expression statement  */
+    STMT_RETURN,   /* Return statement      */
+    STMT_DECL,     /* Declaration statement */
+    STMT_IF,       /* If statement          */
+    STMT_BLOCK,    /* Block statement       */
+    STMT_WHILE,    /* While statement       */
+    STMT_BREAK,    /* Break statement       */
+    STMT_CONTINUE, /* Continue statement    */
+    STMT_EXPR      /* Expression statement  */
 } StmtType;
 
 typedef struct Stmt Stmt;
@@ -168,6 +170,18 @@ Stmt *ast_build_block_stmt_node(Block *block);
  * Returns: The while statement node.
  */
 Stmt *ast_build_while_stmt_node(Expr *cond, Stmt *body);
+
+/**
+ * ast_build_break_stmt_node - Builds a break statement node.
+ * Returns: The break statement node.
+ */
+Stmt *ast_build_break_stmt_node(void);
+
+/**
+ * ast_build_continue_stmt_node - Builds a continue statement node.
+ * Returns: The continue statement node.
+ */
+Stmt *ast_build_continue_stmt_node(void);
 
 /**
  * ast_build_expr_stmt_node - Builds a expression statement node.

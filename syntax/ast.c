@@ -76,7 +76,7 @@ static void ast_free_if_stmt_node(Stmt *stmt) {
 static void ast_free_while_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
-        
+
     ast_free_expr_node(stmt->while_stmt.cond);
     ast_free_stmt_node(stmt->while_stmt.body);
 }
@@ -110,6 +110,9 @@ static void ast_free_stmt_node(Stmt *stmt) {
         break;
     case STMT_EXPR:
         ast_free_expr_stmt_node(stmt);
+        break;
+    case STMT_BREAK:
+    case STMT_CONTINUE:
         break;
     default:
         fprintf(stderr, "Error: Failed to resolve statement type '%d'.\n", stmt->type);
@@ -236,6 +239,28 @@ Stmt *ast_build_while_stmt_node(Expr *cond, Stmt *body) {
     stmt->type            = STMT_WHILE;
     stmt->while_stmt.cond = cond;
     stmt->while_stmt.body = body;
+    return stmt;
+}
+
+Stmt *ast_build_break_stmt_node() {
+    Stmt *stmt = malloc(sizeof(Stmt));
+    if (!stmt) {
+        fprintf(stderr, "Error: Failed to build break statement node. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    stmt->type = STMT_BREAK;
+    return stmt;
+}
+
+Stmt *ast_build_continue_stmt_node() {
+    Stmt *stmt = malloc(sizeof(Stmt));
+    if (!stmt) {
+        fprintf(stderr, "Error: Failed to build continue statement node. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    stmt->type = STMT_CONTINUE;
     return stmt;
 }
 
