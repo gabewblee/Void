@@ -31,6 +31,8 @@ typedef enum {
     /* Assignment and logical operators */
     TOKEN_EQ,        /* =          */
     TOKEN_NOT,       /* !          */
+    TOKEN_ANDAND,    /* &&         */
+    TOKEN_OROR,      /* ||         */
 
     /* Comparison operators             */
     TOKEN_EQEQ,      /* ==         */

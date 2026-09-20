@@ -56,6 +56,65 @@ static void gen_expr(FILE *out, Expr *expr) {
         }
         break;
     case EXPR_BINARY:
+        switch (expr->binary.op) {
+        case TOKEN_ANDAND: {
+            /*
+            * gen_expr(out, expr->binary.left)
+            *     test eax, eax
+            *     je .Lfalse
+            * gen_expr(out, expr->binary.right)
+            *     test eax, eax
+            *     je .Lfalse
+            *     mov eax, 1
+            *     jmp .Ldone
+            * .Lfalselabel:
+            *     mov eax, 0
+            * .Ldonelabel:
+            */
+            int label = gen_label();
+            gen_expr(out, expr->binary.left);
+            fprintf(out, "    test eax, eax\n");
+            fprintf(out, "    je .Lfalse%d\n", label);
+            gen_expr(out, expr->binary.right);
+            fprintf(out, "    test eax, eax\n");
+            fprintf(out, "    je .Lfalse%d\n", label);
+            fprintf(out, "    mov eax, 1\n");
+            fprintf(out, "    jmp .Ldone%d\n", label);
+            fprintf(out, ".Lfalse%d:\n", label);
+            fprintf(out, "    mov eax, 0\n");
+            fprintf(out, ".Ldone%d:\n", label);
+            return;
+        } case TOKEN_OROR: {
+            /*
+            * gen_expr(out, expr->binary.left)
+            *     test eax, eax
+            *     jne .Ltrue
+            * gen_expr(out, expr->binary.right)
+            *     test eax, eax
+            *     jne .Ltrue
+            *     mov eax, 0
+            *     jmp .Ldone
+            * .Ltruelabel:
+            *     mov eax, 1
+            * .Ldonelabel:
+            */
+            int label = gen_label();
+            gen_expr(out, expr->binary.left);
+            fprintf(out, "    test eax, eax\n");
+            fprintf(out, "    jne .Ltrue%d\n", label);
+            gen_expr(out, expr->binary.right);
+            fprintf(out, "    test eax, eax\n");
+            fprintf(out, "    jne .Ltrue%d\n", label);
+            fprintf(out, "    mov eax, 0\n");
+            fprintf(out, "    jmp .Ldone%d\n", label);
+            fprintf(out, ".Ltrue%d:\n", label);
+            fprintf(out, "    mov eax, 1\n");
+            fprintf(out, ".Ldone%d:\n", label);
+            return;
+        } default:
+            break;
+        }
+
         /*
          * gen_expr(out, expr->binary.left)
          *     push rax

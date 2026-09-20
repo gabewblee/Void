@@ -128,9 +128,35 @@ static Expr *parse_equality_expr(Parser *parser) {
     return left;
 }
 
+static Expr *parse_land_expr(Parser *parser) {
+    /* land -> equality (&& equality)* */
+    Expr *left = parse_equality_expr(parser);
+    while (parser->lookahead.type == TOKEN_ANDAND) {
+        TokenType op = parser->lookahead.type;
+        match(parser, parser->lookahead.type);
+        Expr *right = parse_equality_expr(parser);
+        left = ast_build_binary_expr_node(op, left, right);
+    }
+
+    return left;
+}
+
+static Expr *parse_lor_expr(Parser *parser) {
+    /* lor -> land (|| land)* */
+    Expr *left = parse_land_expr(parser);
+    while (parser->lookahead.type == TOKEN_OROR) {
+        TokenType op = parser->lookahead.type;
+        match(parser, parser->lookahead.type);
+        Expr *right = parse_land_expr(parser);
+        left = ast_build_binary_expr_node(op, left, right);
+    }
+
+    return left;
+}
+
 static Expr *parse_assign_expr(Parser *parser) {
-    /* assign -> equality (= assign)? */
-    Expr *expr = parse_equality_expr(parser);
+    /* assign -> lor (= assign)? */
+    Expr *expr = parse_lor_expr(parser);
     if (parser->lookahead.type == TOKEN_EQ) {
         if (expr->type != EXPR_ID) {
             fprintf(stderr, "Error: Expected expression type '%d', got '%d'.\n", EXPR_ID, expr->type);

@@ -127,6 +127,22 @@ Token lexer_get_nxt_token(Lexer *lexer) {
 
         lexer->peek++;
         return tokenize(TOKEN_GEQ, peek, 2);
+    case '&':
+        if (*lexer->peek != '&') {
+            fprintf(stderr,"Error: Failed to tokenize character '&'.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        lexer->peek++;
+        return tokenize(TOKEN_ANDAND, peek, 2);
+    case '|':
+        if (*lexer->peek != '|') {
+            fprintf(stderr,"Error: Failed to tokenize character '|'.\n");
+            exit(EXIT_FAILURE);
+        }
+        
+        lexer->peek++;
+        return tokenize(TOKEN_OROR, peek, 2);
     default:
         fprintf(stderr,"Error: Failed to tokenize character '%c'.\n", c);
         exit(EXIT_FAILURE);
