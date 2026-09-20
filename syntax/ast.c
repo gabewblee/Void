@@ -27,7 +27,7 @@ static void ast_free_expr_node(Expr *expr) {
         return;
 
     switch (expr->type) {
-        case EXPR_INTEGER:
+        case EXPR_INT:
             break;
         case EXPR_UNARY:
             ast_free_expr_node(expr->unary.operand);
@@ -36,47 +36,47 @@ static void ast_free_expr_node(Expr *expr) {
             ast_free_expr_node(expr->binary.left);
             ast_free_expr_node(expr->binary.right);
             break;
-        case EXPR_IDENTIFIER:
-            ast_free_name(expr->identifier.name);
+        case EXPR_ID:
+            ast_free_name(expr->id.name);
             break;
-        case EXPR_ASSIGNMENT:
-            ast_free_expr_node(expr->assignment.target);
-            ast_free_expr_node(expr->assignment.val);
+        case EXPR_ASSIGN:
+            ast_free_expr_node(expr->assign.target);
+            ast_free_expr_node(expr->assign.val);
     }
 
     free(expr);
 }
 
-static void ast_free_return_stmt_node(Stmt *stmt) {
+static void ast_free_ret_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
 
-    ast_free_expr_node(stmt->ret);
+    ast_free_expr_node(stmt->ret_stmt);
 }
 
 static void ast_free_decl_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
 
-    ast_free_name(stmt->decl.name);
-    ast_free_expr_node(stmt->decl.initializer);
-    free(stmt->decl.symbol);
+    ast_free_name(stmt->decl_stmt.name);
+    ast_free_expr_node(stmt->decl_stmt.initializer);
+    free(stmt->decl_stmt.symbol);
 }
 
 static void ast_free_if_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
 
-    ast_free_expr_node(stmt->conditional.cond);
-    ast_free_stmt_node(stmt->conditional.then);
-    ast_free_stmt_node(stmt->conditional.otherwise);
+    ast_free_expr_node(stmt->if_stmt.cond);
+    ast_free_stmt_node(stmt->if_stmt.then_branch);
+    ast_free_stmt_node(stmt->if_stmt.else_branch);
 }
 
 static void ast_free_expr_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
 
-    ast_free_expr_node(stmt->expr);
+    ast_free_expr_node(stmt->expr_stmt);
 }
 
 static void ast_free_stmt_node(Stmt *stmt) {
@@ -85,7 +85,7 @@ static void ast_free_stmt_node(Stmt *stmt) {
 
     switch (stmt->type) {
     case STMT_RETURN:
-        ast_free_return_stmt_node(stmt);
+        ast_free_ret_stmt_node(stmt);
         break;
     case STMT_DECL:
         ast_free_decl_stmt_node(stmt);
@@ -125,7 +125,7 @@ static void ast_free_function_node(Function *function) {
 }
 
 Expr *ast_build_integer_expr_node(long integer) {
-    Expr *expr = ast_build_expr_node(EXPR_INTEGER);
+    Expr *expr = ast_build_expr_node(EXPR_INT);
     expr->integer = integer;
     return expr;
 }
@@ -145,29 +145,29 @@ Expr *ast_build_binary_expr_node(TokenType op, Expr *left, Expr *right) {
     return expr;
 }
 
-Expr *ast_build_identifier_expr_node(char *name) {
-    Expr *expr = ast_build_expr_node(EXPR_IDENTIFIER);
-    expr->identifier.name   = name;
-    expr->identifier.symbol = NULL;
+Expr *ast_build_id_expr_node(char *name) {
+    Expr *expr = ast_build_expr_node(EXPR_ID);
+    expr->id.name   = name;
+    expr->id.symbol = NULL;
     return expr;
 }
 
-Expr *ast_build_assignment_expr_node(Expr *target, Expr *val) {
-    Expr *expr = ast_build_expr_node(EXPR_ASSIGNMENT);
-    expr->assignment.target = target;
-    expr->assignment.val    = val;
+Expr *ast_build_assign_expr_node(Expr *target, Expr *val) {
+    Expr *expr = ast_build_expr_node(EXPR_ASSIGN);
+    expr->assign.target = target;
+    expr->assign.val    = val;
     return expr;
 }
 
-Stmt *ast_build_return_stmt_node(Expr *return_expr) {
+Stmt *ast_build_ret_stmt_node(Expr *return_expr) {
     Stmt *stmt = malloc(sizeof(Stmt));
     if (!stmt) {
         fprintf(stderr, "Error: Failed to build return statement node. Out of memory.\n");
         exit(EXIT_FAILURE);
     }
 
-    stmt->type = STMT_RETURN;
-    stmt->ret  = return_expr;
+    stmt->type     = STMT_RETURN;
+    stmt->ret_stmt = return_expr;
     return stmt;
 }
 
@@ -178,10 +178,10 @@ Stmt *ast_build_decl_stmt_node(char *name, Expr *initializer) {
         exit(EXIT_FAILURE);
     }
 
-    stmt->type             = STMT_DECL;
-    stmt->decl.name        = name;
-    stmt->decl.initializer = initializer;
-    stmt->decl.symbol      = NULL;
+    stmt->type                  = STMT_DECL;
+    stmt->decl_stmt.name        = name;
+    stmt->decl_stmt.initializer = initializer;
+    stmt->decl_stmt.symbol      = NULL;
     return stmt;
 }
 
@@ -192,10 +192,10 @@ Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then, Stmt *otherwise) {
         exit(EXIT_FAILURE);
     }
 
-    stmt->type                  = STMT_IF;
-    stmt->conditional.cond      = cond;
-    stmt->conditional.then      = then;
-    stmt->conditional.otherwise = otherwise;
+    stmt->type                = STMT_IF;
+    stmt->if_stmt.cond        = cond;
+    stmt->if_stmt.then_branch = then;
+    stmt->if_stmt.else_branch = otherwise;
     return stmt;
 }
 
@@ -206,8 +206,8 @@ Stmt *ast_build_expr_stmt_node(Expr *expr) {
         exit(EXIT_FAILURE);
     }
 
-    stmt->type = STMT_EXPR;
-    stmt->expr = expr;
+    stmt->type      = STMT_EXPR;
+    stmt->expr_stmt = expr;
     return stmt;
 }
 

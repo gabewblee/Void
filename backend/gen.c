@@ -11,7 +11,7 @@ static int gen_label() {
 
 static void gen_expr(FILE *out, Expr *expr) {
     switch (expr->type) {
-    case EXPR_INTEGER:
+    case EXPR_INT:
         /*
          *     mov eax
          */
@@ -74,13 +74,13 @@ static void gen_expr(FILE *out, Expr *expr) {
             fprintf(out, "    sub ecx, eax\n");
             fprintf(out, "    mov eax, ecx\n");
             return;
-        case TOKEN_STAR:
+        case TOKEN_MULT:
             /*
              *      imul eax, ecx
              */
             fprintf(out, "    imul eax, ecx\n");
             return;
-        case TOKEN_SLASH:
+        case TOKEN_DIV:
             /*
              *     mov esi, eax
              *     mov eax, ecx
@@ -112,7 +112,7 @@ static void gen_expr(FILE *out, Expr *expr) {
             fprintf(out, "    setle al\n");
             fprintf(out, "    movzx eax, al\n");
             return;
-        case TOKEN_EQ_EQ:
+        case TOKEN_EQEQ:
             /*
              *     cmp ecx, eax
              *     sete al
@@ -156,19 +156,19 @@ static void gen_expr(FILE *out, Expr *expr) {
             break;
         }
         break;
-    case EXPR_IDENTIFIER:
+    case EXPR_ID:
         /*
-         *     mov eax, dword [rbp+expr->identifier.symbol->offset]
+         *     mov eax, dword [rbp+expr->id.symbol->offset]
          */
-        fprintf(out, "    mov eax, dword [rbp%+d]\n", expr->identifier.symbol->offset);
+        fprintf(out, "    mov eax, dword [rbp%+d]\n", expr->id.symbol->offset);
         return;
-    case EXPR_ASSIGNMENT:
+    case EXPR_ASSIGN:
         /*
-         * gen_expr(out, expr->assignment.val)
-         *     mov dword [rbp+expr->assignment.target->identifier.symbol->offset], eax
+         * gen_expr(out, expr->assign.val)
+         *     mov dword [rbp+expr->assign.target->id.symbol->offset], eax
          */
-        gen_expr(out, expr->assignment.val);
-        fprintf(out, "    mov dword [rbp%+d], eax\n", expr->assignment.target->identifier.symbol->offset);
+        gen_expr(out, expr->assign.val);
+        fprintf(out, "    mov dword [rbp%+d], eax\n", expr->assign.target->id.symbol->offset);
 
         return;
     }
@@ -179,64 +179,64 @@ static void gen_expr(FILE *out, Expr *expr) {
 
 static void gen_return_stmt(FILE *out, Stmt *stmt) {
     /*
-     * gen_expr(out, stmt->expr)
-     *     ret
+     * gen_expr(out, stmt->ret_stmt)
+     *     jmp .return
      */
-    gen_expr(out, stmt->ret);
+    gen_expr(out, stmt->ret_stmt);
     fprintf(out, "    jmp .return\n");
 }
 
 static void gen_decl_stmt(FILE *out, Stmt *stmt) {
     /*
-     * gen_expr(out, stmt->decl.initializer)
-     *     mov dword [rbp+stmt->decl.symbol->offset], eax
+     * gen_expr(out, stmt->decl_stmt.initializer)
+     *     mov dword [rbp+stmt->decl_stmt.symbol->offset], eax
      */
-    if (stmt->decl.initializer) {
-        gen_expr(out, stmt->decl.initializer);
-        fprintf(out, "    mov dword [rbp%+d], eax\n", stmt->decl.symbol->offset);
+    if (stmt->decl_stmt.initializer) {
+        gen_expr(out, stmt->decl_stmt.initializer);
+        fprintf(out, "    mov dword [rbp%+d], eax\n", stmt->decl_stmt.symbol->offset);
     }
 }
 
 static void gen_if_stmt(FILE *out, Stmt *stmt) {
     /*
-     * gen_expr(out, stmt->conditional.cond)
+     * gen_expr(out, stmt->if_stmt.cond)
      *     test eax, eax
      * 
-     * if (stmt->conditional.otherwise) {
+     * if (stmt->if_stmt.else_branch) {
      *         je .Lelselabel
-     *     gen_stmt(out, stmt->conditional.then)
+     *     gen_stmt(out, stmt->if_stmt.then_branch)
      *         jmp .Ldonelabel
      *     .Lelselabel:
-     *     gen_stmt(out, stmt->conditional.otherwise)
+     *     gen_stmt(out, stmt->if_stmt.else_branch)
      *     .Ldonelabel:
      * } else {
      *         je .donelabel
-     *     gen_stmt(out, stmt->conditional.then)
+     *     gen_stmt(out, stmt->if_stmt.then_branch)
      *         .Ldonelabel:
      * }
      */
     int label = gen_label();
-    gen_expr(out, stmt->conditional.cond);
+    gen_expr(out, stmt->if_stmt.cond);
     fprintf(out, "    test eax, eax\n");
-    if (stmt->conditional.otherwise) {
+    if (stmt->if_stmt.else_branch) {
         fprintf(out, "    je .Lelse%d\n", label);
-        gen_stmt(out, stmt->conditional.then);
+        gen_stmt(out, stmt->if_stmt.then_branch);
         fprintf(out, "    jmp .Ldone%d\n", label);
         fprintf(out, ".Lelse%d:\n", label);
-        gen_stmt(out, stmt->conditional.otherwise);
+        gen_stmt(out, stmt->if_stmt.else_branch);
         fprintf(out, ".Ldone%d:\n", label);
     } else {
         fprintf(out, "    je .Ldone%d\n", label);
-        gen_stmt(out, stmt->conditional.then);
+        gen_stmt(out, stmt->if_stmt.then_branch);
         fprintf(out, ".Ldone%d:\n", label);
     }
 }
 
 static void gen_expr_stmt(FILE *out, Stmt *stmt) {
     /*
-     * gen_expr(out, stmt->expr)
+     * gen_expr(out, stmt->expr_stmt)
      */
-    gen_expr(out, stmt->expr);
+    gen_expr(out, stmt->expr_stmt);
 }
 
 static void gen_stmt(FILE *out, Stmt *stmt) {

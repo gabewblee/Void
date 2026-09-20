@@ -33,16 +33,16 @@ static char *copy_token_lexeme(Token token) {
 
 static Expr *parse_primary_expr(Parser *parser) {
     /* primary -> number | id | (expr) */
-    if (parser->lookahead.type == TOKEN_NUMBER) {
+    if (parser->lookahead.type == TOKEN_NUM) {
         long num = parser->lookahead.num;
-        match(parser, TOKEN_NUMBER);
+        match(parser, TOKEN_NUM);
         return ast_build_integer_expr_node(num);
     }
 
-    if (parser->lookahead.type == TOKEN_IDENTIFIER) {
+    if (parser->lookahead.type == TOKEN_ID) {
         char *name = copy_token_lexeme(parser->lookahead);
-        match(parser, TOKEN_IDENTIFIER);
-        return ast_build_identifier_expr_node(name);
+        match(parser, TOKEN_ID);
+        return ast_build_id_expr_node(name);
     }
 
     if (parser->lookahead.type == TOKEN_LPAREN) {
@@ -70,7 +70,7 @@ static Expr *parse_unary_expr(Parser *parser) {
 static Expr *parse_multiplicative_expr(Parser *parser) {
     /* multiplicative -> unary ((* | /) unary)* */
     Expr *left = parse_unary_expr(parser);
-    while (parser->lookahead.type == TOKEN_STAR || parser->lookahead.type == TOKEN_SLASH) {
+    while (parser->lookahead.type == TOKEN_MULT || parser->lookahead.type == TOKEN_DIV) {
         TokenType op = parser->lookahead.type;
         match(parser, parser->lookahead.type);
         
@@ -115,7 +115,7 @@ static Expr *parse_relational_expr(Parser *parser) {
 static Expr *parse_equality_expr(Parser *parser) {
     /* equality -> relational ((== | !=) relational)* */
     Expr *left = parse_relational_expr(parser);
-    while (parser->lookahead.type == TOKEN_EQ_EQ || parser->lookahead.type == TOKEN_NEQ) {
+    while (parser->lookahead.type == TOKEN_EQEQ || parser->lookahead.type == TOKEN_NEQ) {
         TokenType op = parser->lookahead.type;
         match(parser, parser->lookahead.type);
         
@@ -126,32 +126,32 @@ static Expr *parse_equality_expr(Parser *parser) {
     return left;
 }
 
-static Expr *parse_assignment_expr(Parser *parser) {
-    /* assignment -> equality (= assignment)? */
+static Expr *parse_assign_expr(Parser *parser) {
+    /* assign -> equality (= assign)? */
     Expr *expr = parse_equality_expr(parser);
     if (parser->lookahead.type == TOKEN_EQ) {
-        if (expr->type != EXPR_IDENTIFIER) {
-            fprintf(stderr, "Error: Expected expression type '%d', got '%d'.\n", EXPR_IDENTIFIER, expr->type);
+        if (expr->type != EXPR_ID) {
+            fprintf(stderr, "Error: Expected expression type '%d', got '%d'.\n", EXPR_ID, expr->type);
             exit(EXIT_FAILURE);
         }
 
         match(parser, TOKEN_EQ);
-        Expr *val = parse_assignment_expr(parser);
-        return ast_build_assignment_expr_node(expr, val);
+        Expr *val = parse_assign_expr(parser);
+        return ast_build_assign_expr_node(expr, val);
     }
 
     return expr;
 }
 
 static Expr *parse_expr(Parser *parser) {
-    /* expr -> assignment */
-    return parse_assignment_expr(parser);
+    /* expr -> assign */
+    return parse_assign_expr(parser);
 }
 
-static Stmt *parse_return_stmt(Parser *parser) {
+static Stmt *parse_ret_stmt(Parser *parser) {
     /* ret -> return expr; */
-    match(parser, TOKEN_RETURN);
-    Stmt *stmt = ast_build_return_stmt_node(parse_expr(parser));
+    match(parser, TOKEN_RET);
+    Stmt *stmt = ast_build_ret_stmt_node(parse_expr(parser));
     match(parser, TOKEN_SEMICOLON);
     return stmt;
 }
@@ -160,7 +160,7 @@ static Stmt *parse_decl_stmt(Parser *parser) {
     /* decl_stmt -> int id (= expr)?; */
     match(parser, TOKEN_INT);
     Token ident = parser->lookahead;
-    match(parser, TOKEN_IDENTIFIER);
+    match(parser, TOKEN_ID);
     char *name = copy_token_lexeme(ident);
     if (parser->lookahead.type == TOKEN_EQ) {
         match(parser, TOKEN_EQ);
@@ -202,8 +202,8 @@ static Stmt *parse_expr_stmt(Parser *parser) {
 static Stmt *parse_stmt(Parser *parser) {
     /* stmt -> ret_stmt | decl_stmt | if_stmt | expr_stmt */
     switch (parser->lookahead.type) {
-    case TOKEN_RETURN:
-        return parse_return_stmt(parser);
+    case TOKEN_RET:
+        return parse_ret_stmt(parser);
     case TOKEN_INT:
         return parse_decl_stmt(parser);
     case TOKEN_IF:
@@ -250,7 +250,7 @@ static Function *parse_function(Parser *parser) {
     match(parser, TOKEN_INT);
 
     Token lookahead = parser->lookahead;
-    match(parser, TOKEN_IDENTIFIER);
+    match(parser, TOKEN_ID);
     char *name = copy_token_lexeme(lookahead);
 
     match(parser, TOKEN_LPAREN);

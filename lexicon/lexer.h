@@ -2,40 +2,40 @@
 
 typedef enum {
     /* Identifiers and literals         */
-    TOKEN_IDENTIFIER, /* identifier */
-    TOKEN_NUMBER,     /* number     */
+    TOKEN_ID,        /* Identifier */
+    TOKEN_NUM,       /* Number     */
 
     /* Keywords                         */
-    TOKEN_INT,        /* int        */
-    TOKEN_RETURN,     /* return     */
-    TOKEN_IF,         /* if         */
-    TOKEN_ELSE,       /* else       */
+    TOKEN_INT,       /* int        */
+    TOKEN_RET,       /* return     */
+    TOKEN_IF,        /* if         */
+    TOKEN_ELSE,      /* else       */
 
     /* Delimiters                       */
-    TOKEN_LPAREN,     /* (          */
-    TOKEN_RPAREN,     /* )          */
-    TOKEN_LBRACE,     /* {          */
-    TOKEN_RBRACE,     /* }          */
-    TOKEN_SEMICOLON,  /* ;          */
+    TOKEN_LPAREN,    /* (          */
+    TOKEN_RPAREN,    /* )          */
+    TOKEN_LBRACE,    /* {          */
+    TOKEN_RBRACE,    /* }          */
+    TOKEN_SEMICOLON, /* ;          */
 
     /* Arithmetic operators             */
-    TOKEN_PLUS,       /* +          */
-    TOKEN_MINUS,      /* -          */
-    TOKEN_STAR,       /* *          */
-    TOKEN_SLASH,      /* /          */
+    TOKEN_PLUS,      /* +          */
+    TOKEN_MINUS,     /* -          */
+    TOKEN_MULT,      /* *          */
+    TOKEN_DIV,       /* /          */
 
     /* Assignment and logical operators */
-    TOKEN_EQ,         /* =          */
-    TOKEN_NOT,        /* !          */
+    TOKEN_EQ,        /* =          */
+    TOKEN_NOT,       /* !          */
 
     /* Comparison operators             */
-    TOKEN_EQ_EQ,      /* ==         */
-    TOKEN_NEQ,        /* !=         */
-    TOKEN_LESS,       /* <          */
-    TOKEN_LEQ,        /* <=         */
-    TOKEN_GREATER,    /* >          */
-    TOKEN_GEQ,        /* >=         */
-    TOKEN_EOF         /* EOF        */
+    TOKEN_EQEQ,      /* ==         */
+    TOKEN_NEQ,       /* !=         */
+    TOKEN_LESS,      /* <          */
+    TOKEN_LEQ,       /* <=         */
+    TOKEN_GREATER,   /* >          */
+    TOKEN_GEQ,       /* >=         */
+    TOKEN_EOF        /* EOF        */
 } TokenType;
 
 typedef struct {

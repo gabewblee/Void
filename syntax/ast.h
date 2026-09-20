@@ -4,11 +4,11 @@
 #include <symtbl.h>
 
 typedef enum {
-    EXPR_INTEGER,    /* Integer constant    */
-    EXPR_UNARY,      /* Unary operation     */
-    EXPR_BINARY,     /* Binary operaton     */
-    EXPR_IDENTIFIER, /* Identifier          */
-    EXPR_ASSIGNMENT  /* Variable assignment */
+    EXPR_INT,    /* Integer constant    */
+    EXPR_UNARY,  /* Unary operation     */
+    EXPR_BINARY, /* Binary operaton     */
+    EXPR_ID,     /* Identifier          */
+    EXPR_ASSIGN  /* Variable assignment */
 } ExprType;
 
 typedef struct Expr Expr;
@@ -29,11 +29,11 @@ struct Expr {
         struct {
             char   *name;   /* Identifier name   */
             Symbol *symbol; /* Identifier symbol */
-        } identifier;
+        } id;
         struct {
             Expr *target; /* Assignment target */
             Expr *val;    /* Assignment value  */
-        } assignment;
+        } assign;
     };
 };
 
@@ -49,18 +49,18 @@ typedef struct Stmt Stmt;
 struct Stmt {
     StmtType type; /* Statement type */
     union {
-        Expr *ret; /* Return value */
+        Expr *ret_stmt; /* Return value */
         struct {
             char   *name;        /* Variable name          */
             Expr   *initializer; /* Variable initial value */
             Symbol *symbol;      /* Variable symbol        */
-        } decl;
+        } decl_stmt;
         struct {
-            Expr *cond;      /* If condition */
-            Stmt *then;      /* Then branch  */
-            Stmt *otherwise; /* Else branch  */
-        } conditional;
-        Expr *expr; /* Expression value */
+            Expr *cond;        /* If condition */
+            Stmt *then_branch; /* Then branch  */
+            Stmt *else_branch; /* Else branch  */
+        } if_stmt;
+        Expr *expr_stmt; /* Expression value */
     };
 };
 
@@ -110,26 +110,26 @@ Expr *ast_build_unary_expr_node(TokenType op, Expr *operand);
 Expr *ast_build_binary_expr_node(TokenType op, Expr *left, Expr *right);
 
 /**
- * ast_build_identifier_expr_node - Builds an identifier expression node.
+ * ast_build_id_expr_node - Builds an identifier expression node.
  * @name: The identifier's name.
  * Returns: The identifier expression node.
  */
-Expr *ast_build_identifier_expr_node(char *name);
+Expr *ast_build_id_expr_node(char *name);
 
 /**
- * ast_build_assignment_expr_node - Builds an assignment expression node.
+ * ast_build_assign_expr_node - Builds an assignment expression node.
  * @target: The node's target.
  * @val: The node's value.
  * Returns: The assignment expression node.
  */
-Expr *ast_build_assignment_expr_node(Expr *target, Expr *val);
+Expr *ast_build_assign_expr_node(Expr *target, Expr *val);
 
 /**
- * ast_build_return_stmt_node - Builds a return statement node.
+ * ast_build_ret_stmt_node - Builds a return statement node.
  * @return_expr: The node's return value.
  * Returns: The return statement node.
  */
-Stmt *ast_build_return_stmt_node(Expr *return_expr);
+Stmt *ast_build_ret_stmt_node(Expr *return_expr);
 
 /**
  * ast_build_decl_stmt_node - Builds a declaration statement node.

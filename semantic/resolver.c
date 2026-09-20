@@ -34,7 +34,7 @@ static Symbol *resolve_symbol(Resolver *resolver, char *name) {
 
 static void resolve_expr(Resolver *resolver, Expr *expr) {
     switch (expr->type) {
-    case EXPR_INTEGER:
+    case EXPR_INT:
         return;
     case EXPR_UNARY:
         resolve_expr(resolver, expr->unary.operand);
@@ -43,24 +43,24 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         resolve_expr(resolver, expr->binary.left);
         resolve_expr(resolver, expr->binary.right);
         return;
-    case EXPR_IDENTIFIER: {
-        Symbol *symbol = resolve_symbol(resolver, expr->identifier.name);
+    case EXPR_ID: {
+        Symbol *symbol = resolve_symbol(resolver, expr->id.name);
         if (!symbol) {
-            fprintf(stderr, "Error: Failed to resolve '%s'.\n", expr->identifier.name);
+            fprintf(stderr, "Error: Failed to resolve '%s'.\n", expr->id.name);
             exit(EXIT_FAILURE);
         }
 
-        expr->identifier.symbol = symbol;
+        expr->id.symbol = symbol;
         return;
     }
-    case EXPR_ASSIGNMENT: {
-        if (expr->assignment.target->type != EXPR_IDENTIFIER) {
+    case EXPR_ASSIGN: {
+        if (expr->assign.target->type != EXPR_ID) {
             fprintf(stderr, "Error: Invalid assignment target.\n");
             exit(EXIT_FAILURE);
         }
 
-        resolve_expr(resolver, expr->assignment.target);
-        resolve_expr(resolver, expr->assignment.val);
+        resolve_expr(resolver, expr->assign.target);
+        resolve_expr(resolver, expr->assign.val);
         return;
     }
     default:
@@ -72,28 +72,28 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
 static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
     switch (stmt->type) {
     case STMT_RETURN:
-        resolve_expr(resolver, stmt->ret);
+        resolve_expr(resolver, stmt->ret_stmt);
         return;
     case STMT_DECL: {
-        if (symbol_table_get(&resolver->scope->symbols, stmt->decl.name)) {
-            fprintf(stderr, "Error: Variable '%s' redefined.\n", stmt->decl.name);
+        if (symbol_table_get(&resolver->scope->symbols, stmt->decl_stmt.name)) {
+            fprintf(stderr, "Error: Variable '%s' redefined.\n", stmt->decl_stmt.name);
             exit(EXIT_FAILURE);
         }
 
-        stmt->decl.symbol = symbol_table_add(&resolver->scope->symbols, stmt->decl.name, resolver->nxt_stack_offset);
+        stmt->decl_stmt.symbol = symbol_table_add(&resolver->scope->symbols, stmt->decl_stmt.name, resolver->nxt_stack_offset);
         resolver->nxt_stack_offset -= 4;
-        if (stmt->decl.initializer)
-            resolve_expr(resolver, stmt->decl.initializer);
+        if (stmt->decl_stmt.initializer)
+            resolve_expr(resolver, stmt->decl_stmt.initializer);
 
         return;
     }
     case STMT_IF:
-        resolve_expr(resolver, stmt->conditional.cond);
-        resolve_stmt(resolver, stmt->conditional.then);
-        resolve_stmt(resolver, stmt->conditional.otherwise);
+        resolve_expr(resolver, stmt->if_stmt.cond);
+        resolve_stmt(resolver, stmt->if_stmt.then_branch);
+        resolve_stmt(resolver, stmt->if_stmt.else_branch);
         return;
     case STMT_EXPR:
-        resolve_expr(resolver, stmt->expr);
+        resolve_expr(resolver, stmt->expr_stmt);
         return;
     default:
         fprintf(stderr, "Error: Failed to resolve statement type '%d'.\n", stmt->type);
