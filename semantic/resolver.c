@@ -102,6 +102,12 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
         resolve_expr(resolver, stmt->while_stmt.cond);
         resolve_stmt(resolver, stmt->while_stmt.body);
         return;
+    case STMT_FOR:
+        resolve_stmt(resolver, stmt->for_stmt.init);
+        resolve_expr(resolver, stmt->for_stmt.cond);
+        resolve_expr(resolver, stmt->for_stmt.inc);
+        resolve_stmt(resolver, stmt->for_stmt.body);
+        return;
     case STMT_BREAK:
     case STMT_CONTINUE:
         return;

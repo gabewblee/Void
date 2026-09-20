@@ -81,6 +81,16 @@ static void ast_free_while_stmt_node(Stmt *stmt) {
     ast_free_stmt_node(stmt->while_stmt.body);
 }
 
+static void ast_free_for_stmt_node(Stmt *stmt) {
+    if (!stmt)
+        return;
+
+    ast_free_stmt_node(stmt->for_stmt.init);
+    ast_free_expr_node(stmt->for_stmt.cond);
+    ast_free_expr_node(stmt->for_stmt.inc);
+    ast_free_stmt_node(stmt->for_stmt.body);
+}
+
 static void ast_free_expr_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
@@ -107,6 +117,9 @@ static void ast_free_stmt_node(Stmt *stmt) {
         break;
     case STMT_WHILE:
         ast_free_while_stmt_node(stmt);
+        break;
+    case STMT_FOR:
+        ast_free_for_stmt_node(stmt);
         break;
     case STMT_EXPR:
         ast_free_expr_stmt_node(stmt);
@@ -239,6 +252,21 @@ Stmt *ast_build_while_stmt_node(Expr *cond, Stmt *body) {
     stmt->type            = STMT_WHILE;
     stmt->while_stmt.cond = cond;
     stmt->while_stmt.body = body;
+    return stmt;
+}
+
+Stmt *ast_build_for_stmt_node(Stmt *init, Expr *cond, Expr *inc, Stmt *body) {
+    Stmt *stmt = malloc(sizeof(Stmt));
+    if (!stmt) {
+        fprintf(stderr, "Error: Failed to build for statement node. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    stmt->type          = STMT_FOR;
+    stmt->for_stmt.init = init;
+    stmt->for_stmt.cond = cond;
+    stmt->for_stmt.inc  = inc;
+    stmt->for_stmt.body = body;
     return stmt;
 }
 

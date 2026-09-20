@@ -43,6 +43,7 @@ typedef enum {
     STMT_IF,       /* If statement          */
     STMT_BLOCK,    /* Block statement       */
     STMT_WHILE,    /* While statement       */
+    STMT_FOR,      /* For statement         */
     STMT_BREAK,    /* Break statement       */
     STMT_CONTINUE, /* Continue statement    */
     STMT_EXPR      /* Expression statement  */
@@ -70,6 +71,12 @@ struct Stmt {
             Expr *cond; /* While loop condition */
             Stmt *body; /* While loop body      */
         } while_stmt;
+        struct {
+            Stmt *init; /* For loop initializer */
+            Expr *cond; /* For loop condition   */
+            Expr *inc;  /* For loop increment   */
+            Stmt *body; /* For loop body        */
+        } for_stmt;
         Expr *expr_stmt; /* Expression value */
     };
 };
@@ -170,6 +177,16 @@ Stmt *ast_build_block_stmt_node(Block *block);
  * Returns: The while statement node.
  */
 Stmt *ast_build_while_stmt_node(Expr *cond, Stmt *body);
+
+/**
+ * ast_build_for_stmt_node - Builds a for statement node.
+ * @init: The for loop initializer.
+ * @cond: The for loop condition.
+ * @inc: The for loop increment.
+ * @body: The for loop body.
+ * Returns: The for statement node.
+ */
+Stmt *ast_build_for_stmt_node(Stmt *init, Expr *cond, Expr *inc, Stmt *body);
 
 /**
  * ast_build_break_stmt_node - Builds a break statement node.

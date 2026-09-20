@@ -243,13 +243,13 @@ static void gen_if_stmt(FILE *out, Stmt *stmt) {
 
 static void gen_while_stmt(FILE *out, Stmt *stmt) {
     /*
-     * .Lwhilelabel:
+     * .Lcontinuelabel:
      * gen_expr(out, stmt->while_stmt.cond)
      *     test eax, eax
-     *     je .Ldonelabel
+     *     je .Lbreaklabel
      * gen_stmt(out, stmt->while_stmt.body)
-     *     jmp .Lwhilelabel
-     * .Ldonelabel:
+     *     jmp .Lcontinuelabel
+     * .Lbreaklabel:
      */
     int label = gen_label();
     LoopCtx loop = {
@@ -258,28 +258,61 @@ static void gen_while_stmt(FILE *out, Stmt *stmt) {
     };
 
     ctx = &loop;
-    fprintf(out, ".Lwhile%d:\n", label);
+    fprintf(out, ".Lcontinue%d:\n", label);
     gen_expr(out, stmt->while_stmt.cond);
     fprintf(out, "    test eax, eax\n");
-    fprintf(out, "    je .Ldone%d\n", label);
+    fprintf(out, "    je .Lbreak%d\n", label);
     gen_stmt(out, stmt->while_stmt.body);
-    fprintf(out, "    jmp .Lwhile%d\n", label);
-    fprintf(out, ".Ldone%d:\n", label);
+    fprintf(out, "    jmp .Lcontinue%d\n", label);
+    fprintf(out, ".Lbreak%d:\n", label);
+    ctx = loop.parent;
+}
+
+static void gen_for_stmt(FILE *out, Stmt *stmt) {
+    /*
+     * gen_stmt(out, stmt->for_stmt.init)
+     * .Lcondlabel:
+     * gen_expr(out, stmt->for_stmt.cond)
+     *     test eax, eax
+     *     je .Lbreaklabel
+     * gen_stmt(out, stmt->for_stmt.body)
+     * .Lcontinuelabel:
+     * gen_expr(out, stmt->for_stmt.inc)
+     *     jmp .Lcondlabel
+     * .Lbreaklabel:
+     */
+    int label = gen_label();
+    LoopCtx loop = {
+        .label  = label,
+        .parent = ctx
+    };
+
+    ctx = &loop;
+    gen_stmt(out, stmt->for_stmt.init);
+    fprintf(out, ".Lcond%d:\n", label);
+    gen_expr(out, stmt->for_stmt.cond);
+    fprintf(out, "    test eax, eax\n");
+    fprintf(out, "    je .Lbreak%d\n", label);
+    gen_stmt(out, stmt->for_stmt.body);
+    fprintf(out, ".Lcontinue%d:\n", label);
+    gen_expr(out, stmt->for_stmt.inc);
+    fprintf(out, "    jmp .Lcond%d\n", label);
+    fprintf(out, ".Lbreak%d:\n", label);
     ctx = loop.parent;
 }
 
 static void gen_break_stmt(FILE *out) {
     /*
-     *     jmp .Ldonelabel
+     *     jmp .Lbreaklabel
      */
-    fprintf(out, "    jmp .Ldone%d\n", ctx->label);
+    fprintf(out, "    jmp .Lbreak%d\n", ctx->label);
 }
 
 static void gen_continue_stmt(FILE *out) {
     /*
-     *     jmp .Lwhilelabel
+     *     jmp .Lcontinuelabel
      */
-    fprintf(out, "    jmp .Lwhile%d\n", ctx->label);
+    fprintf(out, "    jmp .Lcontinue%d\n", ctx->label);
 }
 
 static void gen_expr_stmt(FILE *out, Stmt *stmt) {
@@ -305,6 +338,9 @@ static void gen_stmt(FILE *out, Stmt *stmt) {
         return;
     case STMT_WHILE:
         gen_while_stmt(out, stmt);
+        return;
+    case STMT_FOR:
+        gen_for_stmt(out, stmt);
         return;
     case STMT_BREAK:
         gen_break_stmt(out);

@@ -11,6 +11,7 @@ typedef enum {
     TOKEN_IF,        /* if         */
     TOKEN_ELSE,      /* else       */
     TOKEN_WHILE,     /* while      */
+    TOKEN_FOR,       /* for        */
     TOKEN_BREAK,     /* break      */
     TOKEN_CONTINUE,  /* continue   */
 

@@ -5,6 +5,7 @@
 
 static Expr *parse_expr(Parser *parser);
 static Stmt *parse_stmt(Parser *parser);
+static Stmt *parse_expr_stmt(Parser *parser);
 static Block *parse_block(Parser *parser);
 
 static void advance(Parser *parser) {
@@ -209,6 +210,27 @@ static Stmt *parse_while_stmt(Parser *parser) {
     return ast_build_while_stmt_node(cond, body);
 }
 
+static Stmt *parse_for_init(Parser *parser) {
+    /* for_init -> decl_stmt | expr_stmt */
+    if (parser->lookahead.type == TOKEN_INT)
+        return parse_decl_stmt(parser);
+
+    return parse_expr_stmt(parser);
+}
+
+static Stmt *parse_for_stmt(Parser *parser) {
+    /* for_stmt -> for (for_init expr ; expr) stmt */
+    match(parser, TOKEN_FOR);
+    match(parser, TOKEN_LPAREN);
+    Stmt *init = parse_for_init(parser);
+    Expr *cond = parse_expr(parser);
+    match(parser, TOKEN_SEMICOLON);
+    Expr *inc = parse_expr(parser);
+    match(parser, TOKEN_RPAREN);
+    Stmt *body = parse_stmt(parser);
+    return ast_build_for_stmt_node(init, cond, inc, body);
+}
+
 static Stmt *parse_break_stmt(Parser *parser) {
     /* break_stmt -> break; */
     match(parser, TOKEN_BREAK);
@@ -231,7 +253,7 @@ static Stmt *parse_expr_stmt(Parser *parser) {
 }
 
 static Stmt *parse_stmt(Parser *parser) {
-    /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | while_stmt | break_stmt | continue_stmt | expr_stmt */
+    /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | while_stmt | for_stmt | break_stmt | continue_stmt | expr_stmt */
     switch (parser->lookahead.type) {
     case TOKEN_RET:
         return parse_ret_stmt(parser);
@@ -243,6 +265,8 @@ static Stmt *parse_stmt(Parser *parser) {
         return parse_block_stmt(parser);
     case TOKEN_WHILE:
         return parse_while_stmt(parser);
+    case TOKEN_FOR:
+        return parse_for_stmt(parser);
     case TOKEN_BREAK:
         return parse_break_stmt(parser);
     case TOKEN_CONTINUE:
