@@ -97,6 +97,10 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
     case STMT_BLOCK:
         resolve_block(resolver, stmt->block_stmt);
         return;
+    case STMT_WHILE:
+        resolve_expr(resolver, stmt->while_stmt.cond);
+        resolve_stmt(resolver, stmt->while_stmt.body);
+        return;
     case STMT_EXPR:
         resolve_expr(resolver, stmt->expr_stmt);
         return;

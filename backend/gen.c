@@ -178,7 +178,7 @@ static void gen_expr(FILE *out, Expr *expr) {
     exit(EXIT_FAILURE);
 }
 
-static void gen_return_stmt(FILE *out, Stmt *stmt) {
+static void gen_ret_stmt(FILE *out, Stmt *stmt) {
     /*
      * gen_expr(out, stmt->ret_stmt)
      *     jmp .return
@@ -233,6 +233,26 @@ static void gen_if_stmt(FILE *out, Stmt *stmt) {
     }
 }
 
+static void gen_while_stmt(FILE *out, Stmt *stmt) {
+    /*
+     * .Lwhilelabel:
+     * gen_expr(out, stmt->while_stmt.cond)
+     *     test eax, eax
+     *     je .Ldonelabel
+     * gen_stmt(out, stmt->while_stmt.body)
+     *     jmp .Lwhilelabel
+     * .Ldonelabel:
+     */
+    int label = gen_label();
+    fprintf(out, ".Lwhile%d:\n", label);
+    gen_expr(out, stmt->while_stmt.cond);
+    fprintf(out, "    test eax, eax\n");
+    fprintf(out, "    je .Ldone%d\n", label);
+    gen_stmt(out, stmt->while_stmt.body);
+    fprintf(out, "    jmp .Lwhile%d\n", label);
+    fprintf(out, ".Ldone%d:\n", label);
+}
+
 static void gen_expr_stmt(FILE *out, Stmt *stmt) {
     /*
      * gen_expr(out, stmt->expr_stmt)
@@ -243,7 +263,7 @@ static void gen_expr_stmt(FILE *out, Stmt *stmt) {
 static void gen_stmt(FILE *out, Stmt *stmt) {
     switch (stmt->type) {
     case STMT_RETURN:
-        gen_return_stmt(out, stmt);
+        gen_ret_stmt(out, stmt);
         return;
     case STMT_DECL:
         gen_decl_stmt(out, stmt);
@@ -253,6 +273,9 @@ static void gen_stmt(FILE *out, Stmt *stmt) {
         return;
     case STMT_BLOCK:
         gen_block(out, stmt->block_stmt);
+        return;
+    case STMT_WHILE:
+        gen_while_stmt(out, stmt);
         return;
     case STMT_EXPR:
         gen_expr_stmt(out, stmt);

@@ -42,6 +42,7 @@ typedef enum {
     STMT_DECL,   /* Declaration statement */
     STMT_IF,     /* If statement          */
     STMT_BLOCK,  /* Block statement       */
+    STMT_WHILE,  /* While statement       */
     STMT_EXPR    /* Expression statement  */
 } StmtType;
 
@@ -63,6 +64,10 @@ struct Stmt {
             Stmt *else_branch; /* Else branch  */
         } if_stmt;
         Block *block_stmt;
+        struct {
+            Expr *cond; /* While loop condition */
+            Stmt *body; /* While loop body      */
+        } while_stmt;
         Expr *expr_stmt; /* Expression value */
     };
 };
@@ -152,9 +157,17 @@ Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then_branch, Stmt *else_branch);
 /**
  * ast_build_block_stmt_node - Builds a block statement node.
  * @block: The block node.
- * @Returns: The block statement node.
+ * Returns: The block statement node.
  */
 Stmt *ast_build_block_stmt_node(Block *block);
+
+/**
+ * ast_build_while_stmt_node - Builds a while statement node.
+ * @cond: The while loop condition.
+ * @body: The while loop body.
+ * Returns: The while statement node.
+ */
+Stmt *ast_build_while_stmt_node(Expr *cond, Stmt *body);
 
 /**
  * ast_build_expr_stmt_node - Builds a expression statement node.

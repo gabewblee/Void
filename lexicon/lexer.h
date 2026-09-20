@@ -10,6 +10,7 @@ typedef enum {
     TOKEN_RET,       /* return     */
     TOKEN_IF,        /* if         */
     TOKEN_ELSE,      /* else       */
+    TOKEN_WHILE,     /* while      */
 
     /* Delimiters                       */
     TOKEN_LPAREN,    /* (          */
@@ -39,10 +40,10 @@ typedef enum {
 } TokenType;
 
 typedef struct {
-    TokenType  type;  /* Token type   */
-    char      *start; /* Token start  */
-    int        len;   /* Token length */
-    long       num;   /* Token number */
+    TokenType type;  /* Token type   */
+    char     *start; /* Token start  */
+    int       len;   /* Token length */
+    long      num;   /* Token number */
 } Token;
 
 typedef struct {

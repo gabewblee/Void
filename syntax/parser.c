@@ -199,6 +199,16 @@ static Stmt *parse_block_stmt(Parser *parser) {
     return ast_build_block_stmt_node(parse_block(parser));
 }
 
+static Stmt *parse_while_stmt(Parser *parser) {
+    /* while_stmt -> while (cond) body */
+    match(parser, TOKEN_WHILE);
+    match(parser, TOKEN_LPAREN);
+    Expr *cond = parse_expr(parser);
+    match(parser, TOKEN_RPAREN);
+    Stmt *body = parse_stmt(parser);
+    return ast_build_while_stmt_node(cond, body);
+}
+
 static Stmt *parse_expr_stmt(Parser *parser) {
     /* expr_stmt -> expr; */
     Expr *expr = parse_expr(parser);
@@ -207,7 +217,7 @@ static Stmt *parse_expr_stmt(Parser *parser) {
 }
 
 static Stmt *parse_stmt(Parser *parser) {
-    /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | expr_stmt */
+    /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | while_stmt | expr_stmt */
     switch (parser->lookahead.type) {
     case TOKEN_RET:
         return parse_ret_stmt(parser);
@@ -217,6 +227,8 @@ static Stmt *parse_stmt(Parser *parser) {
         return parse_if_stmt(parser);
     case TOKEN_LBRACE:
         return parse_block_stmt(parser);
+    case TOKEN_WHILE:
+        return parse_while_stmt(parser);
     default:
         return parse_expr_stmt(parser);
     }

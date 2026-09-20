@@ -73,6 +73,14 @@ static void ast_free_if_stmt_node(Stmt *stmt) {
     ast_free_stmt_node(stmt->if_stmt.else_branch);
 }
 
+static void ast_free_while_stmt_node(Stmt *stmt) {
+    if (!stmt)
+        return;
+        
+    ast_free_expr_node(stmt->while_stmt.cond);
+    ast_free_stmt_node(stmt->while_stmt.body);
+}
+
 static void ast_free_expr_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
@@ -96,6 +104,9 @@ static void ast_free_stmt_node(Stmt *stmt) {
         break;
     case STMT_BLOCK:
         ast_free_block_node(stmt->block_stmt);
+        break;
+    case STMT_WHILE:
+        ast_free_while_stmt_node(stmt);
         break;
     case STMT_EXPR:
         ast_free_expr_stmt_node(stmt);
@@ -212,6 +223,19 @@ Stmt *ast_build_block_stmt_node(Block *block) {
 
     stmt->type       = STMT_BLOCK;
     stmt->block_stmt = block;
+    return stmt;
+}
+
+Stmt *ast_build_while_stmt_node(Expr *cond, Stmt *body) {
+    Stmt *stmt = malloc(sizeof(Stmt));
+    if (!stmt) {
+        fprintf(stderr, "Error: Failed to build while statement node. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    stmt->type            = STMT_WHILE;
+    stmt->while_stmt.cond = cond;
+    stmt->while_stmt.body = body;
     return stmt;
 }
 
