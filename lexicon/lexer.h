@@ -1,27 +1,40 @@
 #pragma once
 
 typedef enum {
-    TOKEN_INT,        /* int        */
-    TOKEN_RETURN,     /* return     */
+    /* Identifiers and literals         */
     TOKEN_IDENTIFIER, /* identifier */
     TOKEN_NUMBER,     /* number     */
+
+    /* Keywords                         */
+    TOKEN_INT,        /* int        */
+    TOKEN_RETURN,     /* return     */
+    TOKEN_IF,         /* if         */
+    TOKEN_ELSE,       /* else       */
+
+    /* Delimiters                       */
     TOKEN_LPAREN,     /* (          */
     TOKEN_RPAREN,     /* )          */
     TOKEN_LBRACE,     /* {          */
     TOKEN_RBRACE,     /* }          */
     TOKEN_SEMICOLON,  /* ;          */
+
+    /* Arithmetic operators             */
     TOKEN_PLUS,       /* +          */
     TOKEN_MINUS,      /* -          */
     TOKEN_STAR,       /* *          */
     TOKEN_SLASH,      /* /          */
+
+    /* Assignment and logical operators */
     TOKEN_EQ,         /* =          */
     TOKEN_NOT,        /* !          */
+
+    /* Comparison operators             */
+    TOKEN_EQ_EQ,      /* ==         */
+    TOKEN_NEQ,        /* !=         */
     TOKEN_LESS,       /* <          */
     TOKEN_LEQ,        /* <=         */
-    TOKEN_EQ_EQ,      /* ==         */
-    TOKEN_GEQ,        /* >=         */
     TOKEN_GREATER,    /* >          */
-    TOKEN_NEQ,        /* !=         */
+    TOKEN_GEQ,        /* >=         */
     TOKEN_EOF         /* EOF        */
 } TokenType;
 

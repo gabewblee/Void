@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static void ast_free_stmt_node(Stmt *stmt);
+
 static Expr *ast_build_expr_node(ExprType type) {
     Expr *expr = malloc(sizeof(Expr));
     if (!expr) {
@@ -61,6 +63,15 @@ static void ast_free_decl_stmt_node(Stmt *stmt) {
     free(stmt->decl.symbol);
 }
 
+static void ast_free_if_stmt_node(Stmt *stmt) {
+    if (!stmt)
+        return;
+
+    ast_free_expr_node(stmt->conditional.cond);
+    ast_free_stmt_node(stmt->conditional.then);
+    ast_free_stmt_node(stmt->conditional.otherwise);
+}
+
 static void ast_free_expr_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
@@ -78,6 +89,9 @@ static void ast_free_stmt_node(Stmt *stmt) {
         break;
     case STMT_DECL:
         ast_free_decl_stmt_node(stmt);
+        break;
+    case STMT_IF:
+        ast_free_if_stmt_node(stmt);
         break;
     case STMT_EXPR:
         ast_free_expr_stmt_node(stmt);
@@ -168,6 +182,20 @@ Stmt *ast_build_decl_stmt_node(char *name, Expr *initializer) {
     stmt->decl.name        = name;
     stmt->decl.initializer = initializer;
     stmt->decl.symbol      = NULL;
+    return stmt;
+}
+
+Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then, Stmt *otherwise) {
+    Stmt *stmt = malloc(sizeof(Stmt));
+    if (!stmt) {
+        fprintf(stderr, "Error: Failed to build if statement node. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    stmt->type                  = STMT_IF;
+    stmt->conditional.cond      = cond;
+    stmt->conditional.then      = then;
+    stmt->conditional.otherwise = otherwise;
     return stmt;
 }
 

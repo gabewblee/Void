@@ -1,6 +1,14 @@
 #include <gen.h>
 #include <stdlib.h>
 
+static int label = 0;
+
+static void gen_stmt(FILE *out, Stmt *stmt);
+
+static int gen_label() {
+    return label++;
+}
+
 static void gen_expr(FILE *out, Expr *expr) {
     switch (expr->type) {
     case EXPR_INTEGER:
@@ -189,6 +197,41 @@ static void gen_decl_stmt(FILE *out, Stmt *stmt) {
     }
 }
 
+static void gen_if_stmt(FILE *out, Stmt *stmt) {
+    /*
+     * gen_expr(out, stmt->conditional.cond)
+     *     test eax, eax
+     * 
+     * if (stmt->conditional.otherwise) {
+     *         je .Lelselabel
+     *     gen_stmt(out, stmt->conditional.then)
+     *         jmp .Ldonelabel
+     *     .Lelselabel:
+     *     gen_stmt(out, stmt->conditional.otherwise)
+     *     .Ldonelabel:
+     * } else {
+     *         je .donelabel
+     *     gen_stmt(out, stmt->conditional.then)
+     *         .Ldonelabel:
+     * }
+     */
+    int label = gen_label();
+    gen_expr(out, stmt->conditional.cond);
+    fprintf(out, "    test eax, eax\n");
+    if (stmt->conditional.otherwise) {
+        fprintf(out, "    je .Lelse%d\n", label);
+        gen_stmt(out, stmt->conditional.then);
+        fprintf(out, "    jmp .Ldone%d\n", label);
+        fprintf(out, ".Lelse%d:\n", label);
+        gen_stmt(out, stmt->conditional.otherwise);
+        fprintf(out, ".Ldone%d:\n", label);
+    } else {
+        fprintf(out, "    je .Ldone%d\n", label);
+        gen_stmt(out, stmt->conditional.then);
+        fprintf(out, ".Ldone%d:\n", label);
+    }
+}
+
 static void gen_expr_stmt(FILE *out, Stmt *stmt) {
     /*
      * gen_expr(out, stmt->expr)
@@ -203,6 +246,9 @@ static void gen_stmt(FILE *out, Stmt *stmt) {
         return;
     case STMT_DECL:
         gen_decl_stmt(out, stmt);
+        return;
+    case STMT_IF:
+        gen_if_stmt(out, stmt);
         return;
     case STMT_EXPR:
         gen_expr_stmt(out, stmt);

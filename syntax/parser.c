@@ -4,6 +4,7 @@
 #include <string.h>
 
 static Expr *parse_expr(Parser *parser);
+static Stmt *parse_stmt(Parser *parser);
 
 static void advance(Parser *parser) {
     parser->lookahead = lexer_get_nxt_token(parser->lexer);
@@ -177,6 +178,20 @@ static Stmt *parse_decl_stmt(Parser *parser) {
     exit(EXIT_FAILURE);
 }
 
+static Stmt *parse_if_stmt(Parser *parser) {
+    /* if_stmt -> if (expr) stmt (else stmt)?*/
+    match(parser, TOKEN_IF);
+    Expr *condition = parse_expr(parser);
+    Stmt *consequent = parse_stmt(parser);
+    Stmt *alternate = NULL;
+    if (parser->lookahead.type == TOKEN_ELSE) {
+        match(parser, TOKEN_ELSE);
+        alternate = parse_stmt(parser);
+    }
+    
+    return ast_build_if_stmt_node(condition, consequent, alternate);
+}
+
 static Stmt *parse_expr_stmt(Parser *parser) {
     /* expr_stmt -> expr; */
     Expr *expr = parse_expr(parser);
@@ -185,12 +200,14 @@ static Stmt *parse_expr_stmt(Parser *parser) {
 }
 
 static Stmt *parse_stmt(Parser *parser) {
-    /* stmt -> ret_stmt | decl_stmt | expr_stmt */
+    /* stmt -> ret_stmt | decl_stmt | if_stmt | expr_stmt */
     switch (parser->lookahead.type) {
     case TOKEN_RETURN:
         return parse_return_stmt(parser);
     case TOKEN_INT:
         return parse_decl_stmt(parser);
+    case TOKEN_IF:
+        return parse_if_stmt(parser);
     default:
         return parse_expr_stmt(parser);
     }

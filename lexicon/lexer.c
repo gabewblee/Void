@@ -21,7 +21,7 @@ static inline void handle_blank(Lexer *lexer) {
         lexer->peek++;
 }
 
-static Token handle_ident(Lexer *lexer) {
+static Token handle_identifier(Lexer *lexer) {
     char *start = lexer->peek;
     while (isalnum((unsigned char)*lexer->peek) || *lexer->peek == '_')
         lexer->peek++;
@@ -33,10 +33,16 @@ static Token handle_ident(Lexer *lexer) {
     if (match(start, len, "return"))
         return tokenize(TOKEN_RETURN, start, len);
 
+    if (match(start, len, "if"))
+        return tokenize(TOKEN_IF, start, len);
+
+    if (match(start, len, "else"))
+        return tokenize(TOKEN_ELSE, start, len);
+
     return tokenize(TOKEN_IDENTIFIER, start, len);
 }
 
-static Token handle_num(Lexer *lexer) {
+static Token handle_number(Lexer *lexer) {
     char *start = lexer->peek; long num = 0;
     while (isdigit((unsigned char)*lexer->peek)) {
         num = num * 10 + (*lexer->peek - '0');
@@ -59,11 +65,11 @@ Token lexer_get_nxt_token(Lexer *lexer) {
 
     /* The next token is an identifier */
     if (isalpha((unsigned char)c) || c == '_')
-        return handle_ident(lexer);
+        return handle_identifier(lexer);
 
     /* The next token is a number */
     if (isdigit((unsigned char)c))
-        return handle_num(lexer);
+        return handle_number(lexer);
 
     lexer->peek++;
     switch(c) {

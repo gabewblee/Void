@@ -27,12 +27,12 @@ struct Expr {
             Expr*     right; /* Right operand    */
         } binary;
         struct {
-            char   *name;
-            Symbol *symbol;
+            char   *name;   /* Identifier name   */
+            Symbol *symbol; /* Identifier symbol */
         } identifier;
         struct {
-            Expr *target;
-            Expr *val;
+            Expr *target; /* Assignment target */
+            Expr *val;    /* Assignment value  */
         } assignment;
     };
 };
@@ -40,6 +40,7 @@ struct Expr {
 typedef enum {
     STMT_RETURN, /* Return statement      */
     STMT_DECL,   /* Declaration statement */
+    STMT_IF,     /* If statement          */
     STMT_EXPR    /* Expression statement  */
 } StmtType;
 
@@ -54,6 +55,11 @@ struct Stmt {
             Expr   *initializer; /* Variable initial value */
             Symbol *symbol;      /* Variable symbol        */
         } decl;
+        struct {
+            Expr *cond;      /* If condition */
+            Stmt *then;      /* Then branch  */
+            Stmt *otherwise; /* Else branch  */
+        } conditional;
         Expr *expr; /* Expression value */
     };
 };
@@ -132,6 +138,15 @@ Stmt *ast_build_return_stmt_node(Expr *return_expr);
  * Returns: The declaration statement node.
  */
 Stmt *ast_build_decl_stmt_node(char *name, Expr *initializer);
+
+/**
+ * ast_build_if_stmt_node - Builds an if statement node.
+ * @cond: The if condition.
+ * @then: The then branch.
+ * @otherwise: The else branch.
+ * Returns: The if statement node.
+ */
+Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then, Stmt *otherwise);
 
 /**
  * ast_build_expr_stmt_node - Builds a expression statement node.

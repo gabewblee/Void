@@ -87,6 +87,11 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
 
         return;
     }
+    case STMT_IF:
+        resolve_expr(resolver, stmt->conditional.cond);
+        resolve_stmt(resolver, stmt->conditional.then);
+        resolve_stmt(resolver, stmt->conditional.otherwise);
+        return;
     case STMT_EXPR:
         resolve_expr(resolver, stmt->expr);
         return;
