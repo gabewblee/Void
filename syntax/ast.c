@@ -1,19 +1,37 @@
 #include <ast.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 static void ast_free_stmt_node(Stmt *stmt);
 static void ast_free_block_node(Block *block);
 
+static void error(char *fmt, ...) {
+    fprintf(stderr, "error: ");
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
+
 static Expr *ast_build_expr_node(ExprType type) {
     Expr *expr = malloc(sizeof(Expr));
-    if (!expr) {
-        fprintf(stderr, "Error: Failed to build expression node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
+    if (!expr)
+        error("out of memory");
 
     expr->type = type;
     return expr;
+}
+
+static Stmt *ast_build_stmt_node(StmtType type) {
+    Stmt *stmt = malloc(sizeof(Stmt));
+    if (!stmt)
+        error("out of memory");
+
+    stmt->type = type;
+    return stmt;
 }
 
 static void ast_free_name(char *s) {
@@ -43,6 +61,15 @@ static void ast_free_expr_node(Expr *expr) {
         case EXPR_ASSIGN:
             ast_free_expr_node(expr->assign.target);
             ast_free_expr_node(expr->assign.val);
+            break;
+        case EXPR_CALL:
+            ast_free_name(expr->call.name);
+            for (int i = 0; i < expr->call.argc; i++)
+                ast_free_expr_node(expr->call.args[i]);
+            free(expr->call.args);
+            break;
+        default:
+            error("internal error: unknown expression type %d", expr->type);
     }
 
     free(expr);
@@ -128,8 +155,7 @@ static void ast_free_stmt_node(Stmt *stmt) {
     case STMT_CONTINUE:
         break;
     default:
-        fprintf(stderr, "Error: Failed to resolve statement type '%d'.\n", stmt->type);
-        exit(EXIT_FAILURE);
+        error("internal error: unknown statement type %d", stmt->type);
     }
     
     free(stmt);
@@ -151,6 +177,10 @@ static void ast_free_function_node(Function *function) {
         return;
 
     free(function->name);
+    for (int i = 0; i < function->paramc; i++)
+        free(function->params[i]);
+    
+    free(function->params);
     ast_free_block_node(function->body);
     free(function);
 }
@@ -190,26 +220,22 @@ Expr *ast_build_assign_expr_node(Expr *target, Expr *val) {
     return expr;
 }
 
-Stmt *ast_build_ret_stmt_node(Expr *return_expr) {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build return statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
+Expr *ast_build_call_expr_node(char *name, Expr **args, int argc) {
+    Expr *expr = ast_build_expr_node(EXPR_CALL);
+    expr->call.name = name;
+    expr->call.args = args;
+    expr->call.argc = argc;
+    return expr;
+}
 
-    stmt->type     = STMT_RETURN;
-    stmt->ret_stmt = return_expr;
+Stmt *ast_build_ret_stmt_node(Expr *ret_expr) {
+    Stmt *stmt = ast_build_stmt_node(STMT_RETURN);
+    stmt->ret_stmt = ret_expr;
     return stmt;
 }
 
 Stmt *ast_build_decl_stmt_node(char *name, Expr *initializer) {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build declaration statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type                  = STMT_DECL;
+    Stmt *stmt = ast_build_stmt_node(STMT_DECL);
     stmt->decl_stmt.name        = name;
     stmt->decl_stmt.initializer = initializer;
     stmt->decl_stmt.symbol      = NULL;
@@ -217,13 +243,7 @@ Stmt *ast_build_decl_stmt_node(char *name, Expr *initializer) {
 }
 
 Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then, Stmt *otherwise) {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build if statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type                = STMT_IF;
+    Stmt *stmt = ast_build_stmt_node(STMT_IF);
     stmt->if_stmt.cond        = cond;
     stmt->if_stmt.then_branch = then;
     stmt->if_stmt.else_branch = otherwise;
@@ -231,38 +251,20 @@ Stmt *ast_build_if_stmt_node(Expr *cond, Stmt *then, Stmt *otherwise) {
 }
 
 Stmt *ast_build_block_stmt_node(Block *block) {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build block statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type       = STMT_BLOCK;
+    Stmt *stmt = ast_build_stmt_node(STMT_BLOCK);
     stmt->block_stmt = block;
     return stmt;
 }
 
 Stmt *ast_build_while_stmt_node(Expr *cond, Stmt *body) {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build while statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type            = STMT_WHILE;
+    Stmt *stmt = ast_build_stmt_node(STMT_WHILE);
     stmt->while_stmt.cond = cond;
     stmt->while_stmt.body = body;
     return stmt;
 }
 
 Stmt *ast_build_for_stmt_node(Stmt *init, Expr *cond, Expr *inc, Stmt *body) {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build for statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type          = STMT_FOR;
+    Stmt *stmt = ast_build_stmt_node(STMT_FOR);
     stmt->for_stmt.init = init;
     stmt->for_stmt.cond = cond;
     stmt->for_stmt.inc  = inc;
@@ -271,72 +273,51 @@ Stmt *ast_build_for_stmt_node(Stmt *init, Expr *cond, Expr *inc, Stmt *body) {
 }
 
 Stmt *ast_build_break_stmt_node() {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build break statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type = STMT_BREAK;
+    Stmt *stmt = ast_build_stmt_node(STMT_BREAK);
     return stmt;
 }
 
 Stmt *ast_build_continue_stmt_node() {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build continue statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type = STMT_CONTINUE;
+    Stmt *stmt = ast_build_stmt_node(STMT_CONTINUE);
     return stmt;
 }
 
 Stmt *ast_build_expr_stmt_node(Expr *expr) {
-    Stmt *stmt = malloc(sizeof(Stmt));
-    if (!stmt) {
-        fprintf(stderr, "Error: Failed to build expression statement node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    stmt->type      = STMT_EXPR;
+    Stmt *stmt = ast_build_stmt_node(STMT_EXPR);
     stmt->expr_stmt = expr;
     return stmt;
 }
 
-Block *ast_build_block_node(Stmt **stmts, int cnt) {
+Block *ast_build_block_node(Stmt **stmts, int stmtc) {
     Block *block = malloc(sizeof(Block));
-    if (!block) {
-        fprintf(stderr, "Error: Failed to build block node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
+    if (!block)
+        error("out of memory");
 
     block->stmts = stmts;
-    block->cnt   = cnt;
+    block->cnt   = stmtc;
     return block;
 }
 
-Function *ast_build_function_node(char *name, Block *body) {
+Function *ast_build_function_node(char *name, char **params, int paramc, Block *body) {
     Function *function = malloc(sizeof(Function));
-    if (!function) {
-        fprintf(stderr, "Error: Failed to build function node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
+    if (!function)
+        error("out of memory");
 
-    function->name  = name;
-    function->body  = body;
-    function->stack = 0;
+    function->name   = name;
+    function->params = params;
+    function->paramc = paramc;
+    function->body   = body;
+    function->stack  = 0;
     return function;
 }
 
-Program *ast_build_program_node(Function *function) {
+Program *ast_build_program_node(Function **functions, int functionc) {
     Program *program = malloc(sizeof(Program));
-    if (!program) {
-        fprintf(stderr, "Error: Failed to build program node. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
+    if (!program)
+        error("out of memory");
 
-    program->function = function;
+    program->functions = functions;
+    program->functionc = functionc;
     return program;
 }
 
@@ -344,6 +325,9 @@ void ast_free_program_node(Program *program) {
     if (!program)
         return;
 
-    ast_free_function_node(program->function);
+    for (int i = 0; i < program->functionc; i++)
+        ast_free_function_node(program->functions[i]);
+    
+    free(program->functions);
     free(program);
 }

@@ -8,7 +8,8 @@ typedef enum {
     EXPR_UNARY,  /* Unary operation     */
     EXPR_BINARY, /* Binary operaton     */
     EXPR_ID,     /* Identifier          */
-    EXPR_ASSIGN  /* Variable assignment */
+    EXPR_ASSIGN, /* Variable assignment */
+    EXPR_CALL    /* Function call       */
 } ExprType;
 
 typedef struct Expr Expr;
@@ -27,13 +28,19 @@ struct Expr {
             Expr*     right; /* Right operand    */
         } binary;
         struct {
-            char   *name;   /* Identifier name   */
-            Symbol *symbol; /* Identifier symbol */
+            char      *name;   /* Identifier name   */
+            VarSymbol *symbol; /* Identifier symbol */
         } id;
         struct {
             Expr *target; /* Assignment target */
             Expr *val;    /* Assignment value  */
         } assign;
+        struct {
+            char           *name;   /* Function name           */
+            Expr          **args;   /* Function arguments      */
+            int             argc;   /* Function argument count */
+            FunctionSymbol *symbol; /* Function symbol         */
+        } call;
     };
 };
 
@@ -57,9 +64,9 @@ struct Stmt {
     union {
         Expr *ret_stmt; /* Return value */
         struct {
-            char   *name;        /* Variable name          */
-            Expr   *initializer; /* Variable initial value */
-            Symbol *symbol;      /* Variable symbol        */
+            char      *name;        /* Variable name          */
+            Expr      *initializer; /* Variable initial value */
+            VarSymbol *symbol;      /* Variable symbol        */
         } decl_stmt;
         struct {
             Expr *cond;        /* If condition */
@@ -89,15 +96,18 @@ struct Block {
 typedef struct Function Function;
 
 struct Function {
-    char  *name;  /* Function name       */
-    Block *body;  /* Function body       */
-    int    stack; /* Function stack size */
+    char  *name;   /* Function name            */
+    char **params; /* Function parameters      */
+    int    paramc; /* Function parameter count */
+    Block *body;   /* Function body            */
+    int    stack;  /* Function stack size      */
 };
 
 typedef struct Program Program;
 
 struct Program {
-    Function *function; /* Program function */
+    Function **functions; /* Program functions      */
+    int        functionc; /* Program function count */
 };
 
 /**
@@ -140,11 +150,20 @@ Expr *ast_build_id_expr_node(char *name);
 Expr *ast_build_assign_expr_node(Expr *target, Expr *val);
 
 /**
+ * ast_build_call_expr_node - Builds an call expression node.
+ * @name: The function name.
+ * @args: The function arguments.
+ * @argc: The function argument count.
+ * Returns: The call expression node.
+ */
+Expr *ast_build_call_expr_node(char *name, Expr **args, int argc);
+
+/**
  * ast_build_ret_stmt_node - Builds a return statement node.
- * @return_expr: The node's return value.
+ * @ret_expr: The node's return value.
  * Returns: The return statement node.
  */
-Stmt *ast_build_ret_stmt_node(Expr *return_expr);
+Stmt *ast_build_ret_stmt_node(Expr *ret_expr);
 
 /**
  * ast_build_decl_stmt_node - Builds a declaration statement node.
@@ -210,24 +229,27 @@ Stmt *ast_build_expr_stmt_node(Expr *expr);
 /**
  * ast_build_block_node - Builds a block node.
  * @stmts: The statement list.
- * @cnt: The statement count.
+ * @stmtc: The statement count.
  */
-Block *ast_build_block_node(Stmt **stmts, int cnt);
+Block *ast_build_block_node(Stmt **stmts, int stmtc);
 
 /**
  * ast_build_function_node - Builds a function node.
  * @name: The function's name.
- * @body: The function's body.
+ * @params: The function's parameters.
+ * @paramc: The function's parameter count.
+ * @body: The function's body, or NULL for a declaration.
  * Returns: The function node.
  */
-Function *ast_build_function_node(char *name, Block *body);
+Function *ast_build_function_node(char *name, char **params, int paramc, Block *body);
 
 /**
  * ast_build_program_node - Builds a program node.
- * @function: The program's entry function.
+ * @functions: The program's functions.
+ * @functionc: The program's function count.
  * Returns: The program node.
  */
-Program *ast_build_program_node(Function *function);
+Program *ast_build_program_node(Function **functions, int functionc);
 
 /**
  * ast_free_program_node - Frees the program's allocated memory.

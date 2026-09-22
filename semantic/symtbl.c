@@ -3,7 +3,7 @@
 #include <string.h>
 #include <symtbl.h>
 
-Symbol *symbol_table_get(SymbolTable *table, char *name) {
+VarSymbol *var_table_find(VarTable *table, const char *name) {
     for (int i = 0; i < table->len; i++) {
         if (!strcmp(table->items[i]->name, name))
             return table->items[i];
@@ -12,13 +12,13 @@ Symbol *symbol_table_get(SymbolTable *table, char *name) {
     return NULL;
 }
 
-Symbol *symbol_table_add(SymbolTable *table, char *name, int offset) {
+VarSymbol *var_table_add(VarTable *table, char *name, int offset) {
     if (table->len == table->cap) {
         int cap = table->cap << 1;
 
-        Symbol **items = realloc(table->items, cap * sizeof(Symbol *));
+        VarSymbol **items = realloc(table->items, cap * sizeof(VarSymbol *));
         if (!items) {
-            fprintf(stderr, "Error: Failed to build symbol table. Out of memory.\n");
+            fprintf(stderr, "Error: Failed to build variable table. Out of memory.\n");
             exit(EXIT_FAILURE);
         }
 
@@ -26,15 +26,15 @@ Symbol *symbol_table_add(SymbolTable *table, char *name, int offset) {
         table->cap   = cap;
     }
 
-    Symbol *symbol = malloc(sizeof(Symbol));
+    VarSymbol *symbol = malloc(sizeof(VarSymbol));
     if (!symbol) {
-        fprintf(stderr, "Error: Failed to build symbol. Out of memory.\n");
+        fprintf(stderr, "Error: Failed to build variable. Out of memory.\n");
         exit(EXIT_FAILURE);
     }
 
     symbol->name = name;
     if (!symbol->name) {
-        fprintf(stderr, "Error: Failed to build symbol. Out of memory.\n");
+        fprintf(stderr, "Error: Failed to build variable. Out of memory.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -43,14 +43,69 @@ Symbol *symbol_table_add(SymbolTable *table, char *name, int offset) {
     return symbol;
 }
 
-void symbol_table_free(SymbolTable *table) {
+void var_table_free(VarTable *table) {
     free(table->items);
 }
 
-void symbol_table_init(SymbolTable *table) {
-    table->items = malloc(sizeof(Symbol *));
+void var_table_init(VarTable *table) {
+    table->items = malloc(sizeof(VarSymbol *));
     if (!table->items) {
-        fprintf(stderr, "Error: Failed to build symbol table. Out of memory.\n");
+        fprintf(stderr, "Error: Failed to build variable table. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    table->len = 0;
+    table->cap = 1;
+}
+
+FunctionSymbol *function_table_find(FunctionTable *table, const char *name) {
+    for (int i = 0; i < table->len; i++) {
+        if (!strcmp(table->items[i]->name, name))
+            return table->items[i];
+    }
+
+    return NULL;
+}
+
+FunctionSymbol *function_table_add(FunctionTable *table, char *name, Function *function, int paramc) {
+    if (table->len == table->cap) {
+        int cap = table->cap << 1;
+        FunctionSymbol **items = realloc(table->items, cap * sizeof(FunctionSymbol *));
+        if (!items) {
+            fprintf(stderr, "Error: Failed to build function table. Out of memory.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        table->items = items;
+        table->cap   = cap;
+    }
+
+    FunctionSymbol *symbol = malloc(sizeof(FunctionSymbol));
+    if (!symbol) {
+        fprintf(stderr, "Error: Failed to build function symbol. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    symbol->name = name;
+    if (!symbol->name) {
+        fprintf(stderr, "Error: Failed to build function symbol. Out of memory.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    symbol->function = function;
+    symbol->paramc   = paramc;
+    table->items[table->len++] = symbol;
+    return symbol;
+}
+
+void function_table_free(FunctionTable *table) {
+    free(table->items);
+}
+
+void function_table_init(FunctionTable *table) {
+    table->items = malloc(sizeof(FunctionSymbol *));
+    if (!table->items) {
+        fprintf(stderr, "Error: Failed to build function table. Out of memory.\n");
         exit(EXIT_FAILURE);
     }
 

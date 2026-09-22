@@ -1,41 +1,85 @@
 #pragma once
 
-typedef struct {
-    char *name;   /* Symbol name                  */
-    int   offset; /* Symbol stack offset from rbp */
-} Symbol;
+typedef struct Function Function;
 
 typedef struct {
-    Symbol **items; /* Current symbol table items    */
-    int      len;   /* Current symbol table length   */
-    int      cap;   /* Current symbol table capacity */
-} SymbolTable;
+    char *name;   /* Variable name                  */
+    int   offset; /* Variable stack offset from rbp */
+} VarSymbol;
+
+typedef struct {
+    VarSymbol **items; /* Current variable table items    */
+    int         len;   /* Current variable table length   */
+    int         cap;   /* Current variable table capacity */
+} VarTable;
+
+typedef struct {
+    char     *name;     /* Function name            */
+    Function *function; /* Function definition      */
+    int       paramc;   /* Function parameter count */
+} FunctionSymbol;
+
+typedef struct {
+    FunctionSymbol **items; /* Current function table items    */
+    int              len;   /* Current function table length   */
+    int              cap;   /* Current function table capacity */
+} FunctionTable;
 
 /**
- * symbol_table_get - Finds the symbol associated with @name from @table.
+ * var_table_find - Finds the variable associated with @name from @table.
  * @table: The table to find from.
- * @name: The symbol name.
- * Returns: The symbol found, or NULL if not found.
+ * @name: The variable name.
+ * Returns: The variable found, or NULL if not found.
  */
-Symbol *symbol_table_get(SymbolTable *table, char *name);
+VarSymbol *var_table_find(VarTable *table, const char *name);
 
 /**
- * symbol_table_add - Adds a symbol with fields @name and @offset into @table.
+ * var_table_add - Adds a variable with fields @name and @offset into @table.
  * @table: The table to add into.
- * @name: The symbol name.
- * @offset: The symbol stack offset from rbp.
- * Returns: The symbol added.
+ * @name: The variable name.
+ * @offset: The variable stack offset from rbp.
+ * Returns: The variable added.
  */
-Symbol *symbol_table_add(SymbolTable *table, char *name, int offset);
+VarSymbol *var_table_add(VarTable *table, char *name, int offset);
 
 /**
- * symbol_table_free - Frees the symbol table's allocated memory.
- * @table: The symbol table to free.
+ * var_table_free - Frees the variable table's allocated memory.
+ * @table: The variable table to free.
  */
-void symbol_table_free(SymbolTable *table);
+void var_table_free(VarTable *table);
 
 /**
- * symbol_table_init - Initializes @table.
- * @table: The symbol table to initialize.
+ * var_table_init - Initializes @table.
+ * @table: The variable table to initialize.
  */
-void symbol_table_init(SymbolTable *table);
+void var_table_init(VarTable *table);
+
+/**
+ * function_table_find - Finds the function associated with @name from @table.
+ * @table: The table to find from.
+ * @name: The function name.
+ * Returns: The function found, or NULL if not found.
+ */
+FunctionSymbol *function_table_find(FunctionTable *table, const char *name);
+
+/**
+ * function_table_add - Adds a function with fields @name, @function and @paramc into @table.
+ * @table: The table to add into.
+ * @name: The function name.
+ * @function: The function definition.
+ * @paramc: The function parameter count.
+ * Returns: The function added.
+ */
+FunctionSymbol *function_table_add(FunctionTable *table, char *name, Function *function, int paramc);
+
+/**
+ * function_table_free - Frees the function table's allocated memory.
+ * @table: The function table to free.
+ */
+void function_table_free(FunctionTable *table);
+
+/**
+ * function_table_init - Initializes @table.
+ * @table: The function table to initialize.
+ */
+void function_table_init(FunctionTable *table);

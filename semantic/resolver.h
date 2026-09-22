@@ -6,13 +6,14 @@ typedef struct Scope Scope;
 typedef struct Resolver Resolver;
 
 struct Scope {
-    SymbolTable symbols; /* Scope's symbol table */
-    Scope      *parent;  /* Scope's parent       */
+    VarTable variables; /* Scope's variable table */
+    Scope   *parent;    /* Scope's parent          */
 };
 
 struct Resolver {
-    Scope *scope;            /* Current scope        */
-    int    nxt_stack_offset; /* Current stack offset */
+    FunctionTable functions;        /* Function table       */
+    Scope        *scope;            /* Current scope        */
+    int           nxt_stack_offset; /* Current stack offset */
 };
 
 /**

@@ -21,6 +21,7 @@ typedef enum {
     TOKEN_LBRACE,    /* {          */
     TOKEN_RBRACE,    /* }          */
     TOKEN_SEMICOLON, /* ;          */
+    TOKEN_COMMA,     /* ,          */
 
     /* Arithmetic operators             */
     TOKEN_PLUS,      /* +          */
@@ -49,11 +50,16 @@ typedef struct {
     char     *start; /* Token start  */
     int       len;   /* Token length */
     long      num;   /* Token number */
+
+    /* Token location information */
+    int       line; /* Token line   */
+    int       col;  /* Token column */
 } Token;
 
 typedef struct {
     char *peek; /* Current character */
     int   line; /* Current line      */
+    int   col;  /* Current column    */
 } Lexer;
 
 /**

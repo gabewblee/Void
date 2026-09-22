@@ -1,18 +1,27 @@
 #include <ast.h>
 #include <resolver.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 static void resolve_block(Resolver *resolver, Block *block);
 
+static void error(const char *fmt, ...) {
+    fprintf(stderr, "error: ");
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
+
 static void scope_init(Resolver *resolver) {
     Scope *scope = malloc(sizeof(Scope));
-    if (!scope) {
-        fprintf(stderr, "Error: Failed to build scope. Out of memory.\n");
-        exit(EXIT_FAILURE);
-    }
+    if (!scope)
+        error("out of memory");
 
-    symbol_table_init(&scope->symbols);
+    var_table_init(&scope->variables);
     scope->parent = resolver->scope;
     resolver->scope = scope;
 }
@@ -20,13 +29,13 @@ static void scope_init(Resolver *resolver) {
 static void scope_free(Resolver *resolver) {
     Scope *scope = resolver->scope;
     resolver->scope = resolver->scope->parent;
-    symbol_table_free(&scope->symbols);
+    var_table_free(&scope->variables);
     free(scope);
 }
 
-static Symbol *resolve_symbol(Resolver *resolver, char *name) {
+static VarSymbol *resolve_symbol(Resolver *resolver, char *name) {
     for (Scope *scope = resolver->scope; scope; scope = scope->parent) {
-        Symbol *symbol = symbol_table_get(&scope->symbols, name);
+        VarSymbol *symbol = var_table_find(&scope->variables, name);
         if (symbol)
             return symbol;
     }
@@ -46,28 +55,44 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         resolve_expr(resolver, expr->binary.right);
         return;
     case EXPR_ID: {
-        Symbol *symbol = resolve_symbol(resolver, expr->id.name);
-        if (!symbol) {
-            fprintf(stderr, "Error: Failed to resolve '%s'.\n", expr->id.name);
-            exit(EXIT_FAILURE);
-        }
+        VarSymbol *symbol = resolve_symbol(resolver, expr->id.name);
+        if (!symbol)
+            error("undeclared identifier '%s'", expr->id.name);
 
         expr->id.symbol = symbol;
         return;
     }
     case EXPR_ASSIGN: {
-        if (expr->assign.target->type != EXPR_ID) {
-            fprintf(stderr, "Error: Invalid assignment target.\n");
-            exit(EXIT_FAILURE);
+        switch (expr->assign.target->type) {
+        case EXPR_ID:                                                   break;
+        case EXPR_INT:    error("cannot assign to a number");           break;
+        case EXPR_CALL:   error("cannot assign to a function call");    break;
+        case EXPR_UNARY:  error("cannot assign to a unary expression"); break;
+        case EXPR_BINARY: error("cannot assign to this expression");    break;
+        case EXPR_ASSIGN: error("cannot assign to an assignment");      break;
+        default:          error("cannot assign to this expression");    break;
         }
 
         resolve_expr(resolver, expr->assign.target);
         resolve_expr(resolver, expr->assign.val);
         return;
     }
+    case EXPR_CALL: {
+        FunctionSymbol *symbol = function_table_find(&resolver->functions, expr->call.name);
+        if (!symbol)
+            error("undeclared function '%s'", expr->call.name);
+
+        if (expr->call.argc != symbol->paramc)
+            error("'%s' expected %d arguments, got %d arguments", expr->call.name, symbol->paramc, expr->call.argc);
+        
+        for (int i = 0; i < expr->call.argc; i++)
+            resolve_expr(resolver, expr->call.args[i]);
+        
+        expr->call.symbol = symbol;
+        return;
+    }
     default:
-        fprintf(stderr, "Error: Failed to resolve expression type '%d'.\n", expr->type);
-        exit(EXIT_FAILURE);
+        error("internal error: unknown expression type %d", expr->type);
     }
 }
 
@@ -77,12 +102,10 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
         resolve_expr(resolver, stmt->ret_stmt);
         return;
     case STMT_DECL: {
-        if (symbol_table_get(&resolver->scope->symbols, stmt->decl_stmt.name)) {
-            fprintf(stderr, "Error: Variable '%s' redefined.\n", stmt->decl_stmt.name);
-            exit(EXIT_FAILURE);
-        }
+        if (var_table_find(&resolver->scope->variables, stmt->decl_stmt.name))
+            error("redefinition of '%s'", stmt->decl_stmt.name);
 
-        stmt->decl_stmt.symbol = symbol_table_add(&resolver->scope->symbols, stmt->decl_stmt.name, resolver->nxt_stack_offset);
+        stmt->decl_stmt.symbol = var_table_add(&resolver->scope->variables, stmt->decl_stmt.name, resolver->nxt_stack_offset);
         resolver->nxt_stack_offset -= 4;
         if (stmt->decl_stmt.initializer)
             resolve_expr(resolver, stmt->decl_stmt.initializer);
@@ -115,8 +138,7 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
         resolve_expr(resolver, stmt->expr_stmt);
         return;
     default:
-        fprintf(stderr, "Error: Failed to resolve statement type '%d'.\n", stmt->type);
-        exit(EXIT_FAILURE);
+        error("internal error: unknown statement type %d", stmt->type);
     }
 }
 
@@ -127,17 +149,53 @@ static void resolve_block(Resolver *resolver, Block *block) {
     scope_free(resolver);
 }
 
-static void resolve_function(Resolver *resolver, Function *function) {
+static void resolve_function_decl(Resolver *resolver, Function *function) {
+    FunctionSymbol *entry = function_table_find(&resolver->functions, function->name);
+    if (!entry) {
+        function_table_add(&resolver->functions, function->name, function, function->paramc);
+        return;
+    }
+
+    if (entry->paramc != function->paramc)
+        error("conflicting declaration of '%s': expected %d parameters, got %d parameters", function->name, entry->paramc, function->paramc);
+
+    if (function->body) {
+        if (entry->function->body)
+            error("redefinition of '%s'", function->name);
+
+        entry->function = function;
+    }
+}
+
+static void resolve_function_body(Resolver *resolver, Function *function) {
+    if (!function->body)
+        return;
+
     resolver->nxt_stack_offset = -4;
+    scope_init(resolver);
+    for (int i = 0; i < function->paramc; i++) {
+        if (var_table_find(&resolver->scope->variables, function->params[i]))
+            error("redefinition of parameter '%s'", function->params[i]);
+
+        var_table_add(&resolver->scope->variables, function->params[i], resolver->nxt_stack_offset);
+        resolver->nxt_stack_offset -= 4;
+    }
+
     resolve_block(resolver, function->body);
+    scope_free(resolver);
     function->stack = -resolver->nxt_stack_offset - 4;
 }
 
 void resolve(Resolver *resolver, Program *program) {
-    resolve_function(resolver, program->function);
+    for (int i = 0; i < program->functionc; i++)
+        resolve_function_decl(resolver, program->functions[i]);
+
+    for (int i = 0; i < program->functionc; i++)
+        resolve_function_body(resolver, program->functions[i]);
 }
 
 void resolver_init(Resolver *resolver) {
+    function_table_init(&resolver->functions);
     resolver->scope            = NULL;
     resolver->nxt_stack_offset = 0;
 }

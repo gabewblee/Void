@@ -1,4 +1,5 @@
 #include <gen.h>
+#include <stdarg.h>
 #include <stdlib.h>
 
 typedef struct LoopCtx LoopCtx;
@@ -10,9 +11,20 @@ struct LoopCtx {
 
 static int      label = 0;
 static LoopCtx *ctx   = NULL;
+static int      stack = 0;
 
 static void gen_stmt(FILE *out, Stmt *stmt);
 static void gen_block(FILE *out, Block *block);
+
+static void error(const char *fmt, ...) {
+    fprintf(stderr, "error: ");
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
 
 static int gen_label() {
     return label++;
@@ -52,9 +64,9 @@ static void gen_expr(FILE *out, Expr *expr) {
             fprintf(out, "    movzx eax, al\n");
             return;
         default:
-            break;
+            error("internal error: unsupported unary operator %d", expr->unary.op);
         }
-        break;
+        return;
     case EXPR_BINARY:
         switch (expr->binary.op) {
         case TOKEN_ANDAND: {
@@ -222,9 +234,9 @@ static void gen_expr(FILE *out, Expr *expr) {
             fprintf(out, "    movzx eax, al\n");
             return;
         default:
-            break;
+            error("internal error: unsupported binary operator %d", expr->binary.op);
         }
-        break;
+        return;
     case EXPR_ID:
         /*
          *     mov eax, dword [rbp+expr->id.symbol->offset]
@@ -239,10 +251,43 @@ static void gen_expr(FILE *out, Expr *expr) {
         gen_expr(out, expr->assign.val);
         fprintf(out, "    mov dword [rbp%+d], eax\n", expr->assign.target->id.symbol->offset);
         return;
-    }
+    case EXPR_CALL: {
+        /*
+         * gen_expr(out, arg) + push rax, for each argument
+         *     pop <argreg>, in reverse, for each argument
+         *     mov r11, rsp
+         *     and r11, 15
+         *     mov [rbp-stack], r11
+         *     sub rsp, r11
+         *     call expr->call.symbol->function->name
+         *     mov r11, [rbp-stack]
+         *     add rsp, r11
+         */
+        static const char *argregs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
+        int argc = expr->call.argc;
+        if (argc > 6)
+            error("calls to '%s' with more than 6 arguments are unsupported", expr->call.name);
 
-    fprintf(stderr, "Error: Unsupported expression\n");
-    exit(EXIT_FAILURE);
+        for (int i = 0; i < argc; i++) {
+            gen_expr(out, expr->call.args[i]);
+            fprintf(out, "    push rax\n");
+        }
+
+        for (int i = argc - 1; i >= 0; i--)
+            fprintf(out, "    pop %s\n", argregs[i]);
+
+        fprintf(out, "    mov r11, rsp\n");
+        fprintf(out, "    and r11, 15\n");
+        fprintf(out, "    mov [rbp-%d], r11\n", stack);
+        fprintf(out, "    sub rsp, r11\n");
+        fprintf(out, "    call %s\n", expr->call.symbol->function->name);
+        fprintf(out, "    mov r11, [rbp-%d]\n", stack);
+        fprintf(out, "    add rsp, r11\n");
+        return;
+    }
+    default:
+        error("internal error: unknown expression type %d", expr->type);
+    }
 }
 
 static void gen_ret_stmt(FILE *out, Stmt *stmt) {
@@ -364,6 +409,9 @@ static void gen_break_stmt(FILE *out) {
     /*
      *     jmp .Lbreaklabel
      */
+    if (!ctx)
+        error("'break' outside of a loop");
+
     fprintf(out, "    jmp .Lbreak%d\n", ctx->label);
 }
 
@@ -371,6 +419,9 @@ static void gen_continue_stmt(FILE *out) {
     /*
      *     jmp .Lcontinuelabel
      */
+    if (!ctx)
+        error("'continue' outside of a loop");
+
     fprintf(out, "    jmp .Lcontinue%d\n", ctx->label);
 }
 
@@ -383,36 +434,16 @@ static void gen_expr_stmt(FILE *out, Stmt *stmt) {
 
 static void gen_stmt(FILE *out, Stmt *stmt) {
     switch (stmt->type) {
-    case STMT_RETURN:
-        gen_ret_stmt(out, stmt);
-        return;
-    case STMT_DECL:
-        gen_decl_stmt(out, stmt);
-        return;
-    case STMT_IF:
-        gen_if_stmt(out, stmt);
-        return;
-    case STMT_BLOCK:
-        gen_block(out, stmt->block_stmt);
-        return;
-    case STMT_WHILE:
-        gen_while_stmt(out, stmt);
-        return;
-    case STMT_FOR:
-        gen_for_stmt(out, stmt);
-        return;
-    case STMT_BREAK:
-        gen_break_stmt(out);
-        return;
-    case STMT_CONTINUE:
-        gen_continue_stmt(out);
-        return;
-    case STMT_EXPR:
-        gen_expr_stmt(out, stmt);
-        return;
-    default:
-        fprintf(stderr, "Error: Failed to recognize statement type '%d'.\n", stmt->type);
-        exit(EXIT_FAILURE);
+    case STMT_RETURN:   gen_ret_stmt(out, stmt);                                        return;
+    case STMT_DECL:     gen_decl_stmt(out, stmt);                                       return;
+    case STMT_IF:       gen_if_stmt(out, stmt);                                         return;
+    case STMT_BLOCK:    gen_block(out, stmt->block_stmt);                               return;
+    case STMT_WHILE:    gen_while_stmt(out, stmt);                                      return;
+    case STMT_FOR:      gen_for_stmt(out, stmt);                                        return;
+    case STMT_BREAK:    gen_break_stmt(out);                                            return;
+    case STMT_CONTINUE: gen_continue_stmt(out);                                         return;
+    case STMT_EXPR:     gen_expr_stmt(out, stmt);                                       return;
+    default:            error("internal error: unknown statement type %d", stmt->type); return;
     }
 }
 
@@ -427,17 +458,26 @@ static void gen_function(FILE *out, Function *function) {
      * function->name:
      *     push rbp
      *     mov rbp, rsp
+     *     mov dword [rbp+offset], <argreg>, for each parameter
      * gen_block(out, function->body)
      * .return:
      *     mov rsp, rbp
      *     pop rbp
      *     ret
      */
+    static const char *argregs[] = { "edi", "esi", "edx", "ecx", "r8d", "r9d" };
+    if (function->paramc > 6)
+        error("'%s' has more than 6 parameters", function->name);
+
+    stack = function->stack + 8;
+
     fprintf(out, "global %s\n", function->name);
     fprintf(out, "%s:\n", function->name);
     fprintf(out, "    push rbp\n");
     fprintf(out, "    mov rbp, rsp\n");
-    fprintf(out, "    sub rsp, %d\n", function->stack);
+    fprintf(out, "    sub rsp, %d\n", stack);
+    for (int i = 0; i < function->paramc; i++)
+        fprintf(out, "    mov dword [rbp%+d], %s\n", -4 * (i + 1), argregs[i]);
     gen_block(out, function->body);
     fprintf(out, ".return:\n");
     fprintf(out, "    mov rsp, rbp\n");
@@ -448,10 +488,13 @@ static void gen_function(FILE *out, Function *function) {
 void gen(FILE *out, Program *program) {
     /*
      * section .text
-     * gen_function(out, program->function)
+     * gen_function(out, function), for each defined function
      */
     fprintf(out, "section .text\n");
-    gen_function(out, program->function);
+    for (int i = 0; i < program->functionc; i++) {
+        if (program->functions[i]->body)
+            gen_function(out, program->functions[i]);
+    }
 }
 
 void gen_free() {
