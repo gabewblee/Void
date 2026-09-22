@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static void resolve_block(Resolver *resolver, Block *block);
 
@@ -21,26 +22,53 @@ static void scope_init(Resolver *resolver) {
     if (!scope)
         error("out of memory");
 
-    var_table_init(&scope->variables);
-    scope->parent = resolver->scope;
+    scope->bindings = NULL;
+    scope->len      = 0;
+    scope->cap      = 0;
+    scope->parent   = resolver->scope;
     resolver->scope = scope;
 }
 
 static void scope_free(Resolver *resolver) {
     Scope *scope = resolver->scope;
-    resolver->scope = resolver->scope->parent;
-    var_table_free(&scope->variables);
+    resolver->scope = scope->parent;
+    free(scope->bindings);
     free(scope);
 }
 
-static VarSymbol *resolve_symbol(Resolver *resolver, char *name) {
-    for (Scope *scope = resolver->scope; scope; scope = scope->parent) {
-        VarSymbol *symbol = var_table_find(&scope->variables, name);
-        if (symbol)
-            return symbol;
+static void scope_bind(Scope *scope, char *name, SymbolId id) {
+    if (scope->len == scope->cap) {
+        int cap = scope->cap ? scope->cap << 1 : 1;
+        Binding *bindings = realloc(scope->bindings, cap * sizeof(Binding));
+        if (!bindings)
+            error("out of memory");
+
+        scope->bindings = bindings;
+        scope->cap      = cap;
     }
 
-    return NULL;
+    scope->bindings[scope->len].name = name;
+    scope->bindings[scope->len].id   = id;
+    scope->len++;
+}
+
+static SymbolId scope_find(Scope *scope, const char *name) {
+    for (int i = 0; i < scope->len; i++) {
+        if (!strcmp(scope->bindings[i].name, name))
+            return scope->bindings[i].id;
+    }
+
+    return SYMBOL_INVALID;
+}
+
+static SymbolId resolve_symbol(Resolver *resolver, char *name) {
+    for (Scope *scope = resolver->scope; scope; scope = scope->parent) {
+        SymbolId id = scope_find(scope, name);
+        if (id != SYMBOL_INVALID)
+            return id;
+    }
+
+    return SYMBOL_INVALID;
 }
 
 static void resolve_expr(Resolver *resolver, Expr *expr) {
@@ -55,11 +83,11 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         resolve_expr(resolver, expr->binary.right);
         return;
     case EXPR_ID: {
-        VarSymbol *symbol = resolve_symbol(resolver, expr->id.name);
-        if (!symbol)
+        SymbolId id = resolve_symbol(resolver, expr->id.name);
+        if (id == SYMBOL_INVALID)
             error("undeclared identifier '%s'", expr->id.name);
 
-        expr->id.symbol = symbol;
+        expr->id.symbol = id;
         return;
     }
     case EXPR_ASSIGN: {
@@ -78,17 +106,18 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         return;
     }
     case EXPR_CALL: {
-        FunctionSymbol *symbol = function_table_find(&resolver->functions, expr->call.name);
-        if (!symbol)
+        SymbolId id = scope_find(&resolver->functions, expr->call.name);
+        if (id == SYMBOL_INVALID)
             error("undeclared function '%s'", expr->call.name);
 
-        if (expr->call.argc != symbol->paramc)
-            error("'%s' expected %d arguments, got %d arguments", expr->call.name, symbol->paramc, expr->call.argc);
-        
+        int paramc = symbol_get(&resolver->symbols, id)->paramc;
+        if (expr->call.argc != paramc)
+            error("'%s' expected %d arguments, got %d arguments", expr->call.name, paramc, expr->call.argc);
+
         for (int i = 0; i < expr->call.argc; i++)
             resolve_expr(resolver, expr->call.args[i]);
-        
-        expr->call.symbol = symbol;
+
+        expr->call.symbol = id;
         return;
     }
     default:
@@ -102,11 +131,18 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
         resolve_expr(resolver, stmt->ret_stmt);
         return;
     case STMT_DECL: {
-        if (var_table_find(&resolver->scope->variables, stmt->decl_stmt.name))
+        if (scope_find(resolver->scope, stmt->decl_stmt.name) != SYMBOL_INVALID)
             error("redefinition of '%s'", stmt->decl_stmt.name);
 
-        stmt->decl_stmt.symbol = var_table_add(&resolver->scope->variables, stmt->decl_stmt.name, resolver->nxt_stack_offset);
-        resolver->nxt_stack_offset -= 4;
+        Symbol symbol = {
+            .name   = stmt->decl_stmt.name,
+            .type   = SYMBOL_VAR,
+            .offset = resolver->offset,
+        };
+        SymbolId id = symbol_add(&resolver->symbols, symbol);
+        scope_bind(resolver->scope, stmt->decl_stmt.name, id);
+        stmt->decl_stmt.symbol = id;
+        resolver->offset -= 4;
         if (stmt->decl_stmt.initializer)
             resolve_expr(resolver, stmt->decl_stmt.initializer);
 
@@ -144,18 +180,26 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
 
 static void resolve_block(Resolver *resolver, Block *block) {
     scope_init(resolver);
-    for (int i = 0; i < block->cnt; i++)
+    for (int i = 0; i < block->stmtc; i++)
         resolve_stmt(resolver, block->stmts[i]);
     scope_free(resolver);
 }
 
 static void resolve_function_decl(Resolver *resolver, Function *function) {
-    FunctionSymbol *entry = function_table_find(&resolver->functions, function->name);
-    if (!entry) {
-        function_table_add(&resolver->functions, function->name, function, function->paramc);
+    SymbolId id = scope_find(&resolver->functions, function->name);
+    if (id == SYMBOL_INVALID) {
+        Symbol symbol = {
+            .name     = function->name,
+            .type     = SYMBOL_FUNC,
+            .function = function,
+            .paramc   = function->paramc,
+        };
+        id = symbol_add(&resolver->symbols, symbol);
+        scope_bind(&resolver->functions, function->name, id);
         return;
     }
 
+    Symbol *entry = symbol_get(&resolver->symbols, id);
     if (entry->paramc != function->paramc)
         error("conflicting declaration of '%s': expected %d parameters, got %d parameters", function->name, entry->paramc, function->paramc);
 
@@ -171,19 +215,25 @@ static void resolve_function_body(Resolver *resolver, Function *function) {
     if (!function->body)
         return;
 
-    resolver->nxt_stack_offset = -4;
+    resolver->offset = -4;
     scope_init(resolver);
     for (int i = 0; i < function->paramc; i++) {
-        if (var_table_find(&resolver->scope->variables, function->params[i]))
+        if (scope_find(resolver->scope, function->params[i]) != SYMBOL_INVALID)
             error("redefinition of parameter '%s'", function->params[i]);
 
-        var_table_add(&resolver->scope->variables, function->params[i], resolver->nxt_stack_offset);
-        resolver->nxt_stack_offset -= 4;
+        Symbol symbol = {
+            .name   = function->params[i],
+            .type   = SYMBOL_VAR,
+            .offset = resolver->offset,
+        };
+        SymbolId id = symbol_add(&resolver->symbols, symbol);
+        scope_bind(resolver->scope, function->params[i], id);
+        resolver->offset -= 4;
     }
 
     resolve_block(resolver, function->body);
     scope_free(resolver);
-    function->stack = -resolver->nxt_stack_offset - 4;
+    function->stack = -resolver->offset - 4;
 }
 
 void resolve(Resolver *resolver, Program *program) {
@@ -195,7 +245,16 @@ void resolve(Resolver *resolver, Program *program) {
 }
 
 void resolver_init(Resolver *resolver) {
-    function_table_init(&resolver->functions);
-    resolver->scope            = NULL;
-    resolver->nxt_stack_offset = 0;
+    symbol_table_init(&resolver->symbols);
+    resolver->functions.bindings = NULL;
+    resolver->functions.len      = 0;
+    resolver->functions.cap      = 0;
+    resolver->functions.parent   = NULL;
+    resolver->scope              = NULL;
+    resolver->offset             = 0;
+}
+
+void resolver_free(Resolver *resolver) {
+    symbol_table_free(&resolver->symbols);
+    free(resolver->functions.bindings);
 }

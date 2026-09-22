@@ -9,9 +9,10 @@ struct LoopCtx {
     LoopCtx *parent;
 };
 
-static int      label = 0;
-static LoopCtx *ctx   = NULL;
-static int      stack = 0;
+static int          label   = 0;
+static LoopCtx     *ctx     = NULL;
+static int          stack   = 0;
+static SymbolTable *symbols = NULL;
 
 static void gen_stmt(FILE *out, Stmt *stmt);
 static void gen_block(FILE *out, Block *block);
@@ -239,17 +240,17 @@ static void gen_expr(FILE *out, Expr *expr) {
         return;
     case EXPR_ID:
         /*
-         *     mov eax, dword [rbp+expr->id.symbol->offset]
+         *     mov eax, dword [rbp+offset]
          */
-        fprintf(out, "    mov eax, dword [rbp%+d]\n", expr->id.symbol->offset);
+        fprintf(out, "    mov eax, dword [rbp%+d]\n", symbol_get(symbols, expr->id.symbol)->offset);
         return;
     case EXPR_ASSIGN:
         /*
          * gen_expr(out, expr->assign.val)
-         *     mov dword [rbp+expr->assign.target->id.symbol->offset], eax
+         *     mov dword [rbp+offset], eax
          */
         gen_expr(out, expr->assign.val);
-        fprintf(out, "    mov dword [rbp%+d], eax\n", expr->assign.target->id.symbol->offset);
+        fprintf(out, "    mov dword [rbp%+d], eax\n", symbol_get(symbols, expr->assign.target->id.symbol)->offset);
         return;
     case EXPR_CALL: {
         /*
@@ -259,7 +260,7 @@ static void gen_expr(FILE *out, Expr *expr) {
          *     and r11, 15
          *     mov [rbp-stack], r11
          *     sub rsp, r11
-         *     call expr->call.symbol->function->name
+         *     call function_name
          *     mov r11, [rbp-stack]
          *     add rsp, r11
          */
@@ -280,7 +281,7 @@ static void gen_expr(FILE *out, Expr *expr) {
         fprintf(out, "    and r11, 15\n");
         fprintf(out, "    mov [rbp-%d], r11\n", stack);
         fprintf(out, "    sub rsp, r11\n");
-        fprintf(out, "    call %s\n", expr->call.symbol->function->name);
+        fprintf(out, "    call %s\n", symbol_get(symbols, expr->call.symbol)->function->name);
         fprintf(out, "    mov r11, [rbp-%d]\n", stack);
         fprintf(out, "    add rsp, r11\n");
         return;
@@ -302,11 +303,11 @@ static void gen_ret_stmt(FILE *out, Stmt *stmt) {
 static void gen_decl_stmt(FILE *out, Stmt *stmt) {
     /*
      * gen_expr(out, stmt->decl_stmt.initializer)
-     *     mov dword [rbp+stmt->decl_stmt.symbol->offset], eax
+     *     mov dword [rbp+offset], eax
      */
     if (stmt->decl_stmt.initializer) {
         gen_expr(out, stmt->decl_stmt.initializer);
-        fprintf(out, "    mov dword [rbp%+d], eax\n", stmt->decl_stmt.symbol->offset);
+        fprintf(out, "    mov dword [rbp%+d], eax\n", symbol_get(symbols, stmt->decl_stmt.symbol)->offset);
     }
 }
 
@@ -448,7 +449,7 @@ static void gen_stmt(FILE *out, Stmt *stmt) {
 }
 
 static void gen_block(FILE *out, Block *block) {
-    for (int i = 0; i < block->cnt; i++)
+    for (int i = 0; i < block->stmtc; i++)
         gen_stmt(out, block->stmts[i]);
 }
 
@@ -485,11 +486,12 @@ static void gen_function(FILE *out, Function *function) {
     fprintf(out, "    ret\n");
 }
 
-void gen(FILE *out, Program *program) {
+void gen(FILE *out, Program *program, SymbolTable *table) {
     /*
      * section .text
      * gen_function(out, function), for each defined function
      */
+    symbols = table;
     fprintf(out, "section .text\n");
     for (int i = 0; i < program->functionc; i++) {
         if (program->functions[i]->body)

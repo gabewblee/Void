@@ -1,7 +1,7 @@
 #pragma once
 
 #include <lexer.h>
-#include <symtbl.h>
+#include <symbol.h>
 
 typedef enum {
     EXPR_INT,    /* Integer constant    */
@@ -12,7 +12,11 @@ typedef enum {
     EXPR_CALL    /* Function call       */
 } ExprType;
 
-typedef struct Expr Expr;
+typedef struct Expr     Expr;
+typedef struct Stmt     Stmt;
+typedef struct Block    Block;
+typedef struct Function Function;
+typedef struct Program  Program;
 
 struct Expr {
     ExprType type; /* Expression type */
@@ -28,18 +32,18 @@ struct Expr {
             Expr*     right; /* Right operand    */
         } binary;
         struct {
-            char      *name;   /* Identifier name   */
-            VarSymbol *symbol; /* Identifier symbol */
+            char    *name;   /* Identifier name */
+            SymbolId symbol; /* Variable symbol */
         } id;
         struct {
             Expr *target; /* Assignment target */
             Expr *val;    /* Assignment value  */
         } assign;
         struct {
-            char           *name;   /* Function name           */
-            Expr          **args;   /* Function arguments      */
-            int             argc;   /* Function argument count */
-            FunctionSymbol *symbol; /* Function symbol         */
+            char    *name;   /* Function name           */
+            Expr   **args;   /* Function arguments      */
+            int      argc;   /* Function argument count */
+            SymbolId symbol; /* Function symbol         */
         } call;
     };
 };
@@ -56,17 +60,14 @@ typedef enum {
     STMT_EXPR      /* Expression statement  */
 } StmtType;
 
-typedef struct Stmt Stmt;
-typedef struct Block Block;
-
 struct Stmt {
     StmtType type; /* Statement type */
     union {
         Expr *ret_stmt; /* Return value */
         struct {
-            char      *name;        /* Variable name          */
-            Expr      *initializer; /* Variable initial value */
-            VarSymbol *symbol;      /* Variable symbol        */
+            char    *name;        /* Variable name          */
+            Expr    *initializer; /* Variable initial value */
+            SymbolId symbol;      /* Variable symbol        */
         } decl_stmt;
         struct {
             Expr *cond;        /* If condition */
@@ -90,10 +91,8 @@ struct Stmt {
 
 struct Block {
     Stmt **stmts; /* Statement list  */
-    int    cnt;   /* Statement count */
+    int    stmtc;   /* Statement count */
 };
-
-typedef struct Function Function;
 
 struct Function {
     char  *name;   /* Function name            */
@@ -102,8 +101,6 @@ struct Function {
     Block *body;   /* Function body            */
     int    stack;  /* Function stack size      */
 };
-
-typedef struct Program Program;
 
 struct Program {
     Function **functions; /* Program functions      */

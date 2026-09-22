@@ -88,7 +88,6 @@ static void ast_free_decl_stmt_node(Stmt *stmt) {
 
     ast_free_name(stmt->decl_stmt.name);
     ast_free_expr_node(stmt->decl_stmt.initializer);
-    free(stmt->decl_stmt.symbol);
 }
 
 static void ast_free_if_stmt_node(Stmt *stmt) {
@@ -165,7 +164,7 @@ static void ast_free_block_node(Block *block) {
     if (!block)
         return;
 
-    for (int i = 0; i < block->cnt; i++)
+    for (int i = 0; i < block->stmtc; i++)
         ast_free_stmt_node(block->stmts[i]);
 
     free(block->stmts);
@@ -209,7 +208,7 @@ Expr *ast_build_binary_expr_node(TokenType op, Expr *left, Expr *right) {
 Expr *ast_build_id_expr_node(char *name) {
     Expr *expr = ast_build_expr_node(EXPR_ID);
     expr->id.name   = name;
-    expr->id.symbol = NULL;
+    expr->id.symbol = SYMBOL_INVALID;
     return expr;
 }
 
@@ -222,9 +221,10 @@ Expr *ast_build_assign_expr_node(Expr *target, Expr *val) {
 
 Expr *ast_build_call_expr_node(char *name, Expr **args, int argc) {
     Expr *expr = ast_build_expr_node(EXPR_CALL);
-    expr->call.name = name;
-    expr->call.args = args;
-    expr->call.argc = argc;
+    expr->call.name   = name;
+    expr->call.args   = args;
+    expr->call.argc   = argc;
+    expr->call.symbol = SYMBOL_INVALID;
     return expr;
 }
 
@@ -238,7 +238,7 @@ Stmt *ast_build_decl_stmt_node(char *name, Expr *initializer) {
     Stmt *stmt = ast_build_stmt_node(STMT_DECL);
     stmt->decl_stmt.name        = name;
     stmt->decl_stmt.initializer = initializer;
-    stmt->decl_stmt.symbol      = NULL;
+    stmt->decl_stmt.symbol      = SYMBOL_INVALID;
     return stmt;
 }
 
@@ -294,7 +294,7 @@ Block *ast_build_block_node(Stmt **stmts, int stmtc) {
         error("out of memory");
 
     block->stmts = stmts;
-    block->cnt   = stmtc;
+    block->stmtc = stmtc;
     return block;
 }
 

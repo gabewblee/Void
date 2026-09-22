@@ -57,9 +57,10 @@ int main(int argc, char **argv) {
     resolver_init(&resolver);
     resolve(&resolver, program);
 
-    gen(stdout, program);
+    gen(stdout, program, &resolver.symbols);
 
     parser_free(program);
+    resolver_free(&resolver);
     free(buf);
     return EXIT_SUCCESS;
 }
