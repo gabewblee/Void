@@ -10,7 +10,7 @@ typedef enum {
     EXPR_ID,     /* Identifier          */
     EXPR_ASSIGN, /* Variable assignment */
     EXPR_CALL    /* Function call       */
-} ExprType;
+} ExprKind;
 
 typedef struct Expr     Expr;
 typedef struct Stmt     Stmt;
@@ -19,15 +19,15 @@ typedef struct Function Function;
 typedef struct Program  Program;
 
 struct Expr {
-    ExprType type; /* Expression type */
+    ExprKind kind; /* Expression kind */
     union {
         long integer; /* Expression integer */
         struct {
-            TokenType op;      /* Unary operation */
+            TokenKind op;      /* Unary operation */
             Expr*     operand; /* Unary operand   */
         } unary;
         struct {
-            TokenType op;    /* Binary operation */
+            TokenKind op;    /* Binary operation */
             Expr*     left;  /* Left operand     */
             Expr*     right; /* Right operand    */
         } binary;
@@ -58,10 +58,10 @@ typedef enum {
     STMT_BREAK,    /* Break statement       */
     STMT_CONTINUE, /* Continue statement    */
     STMT_EXPR      /* Expression statement  */
-} StmtType;
+} StmtKind;
 
 struct Stmt {
-    StmtType type; /* Statement type */
+    StmtKind kind; /* Statement kind */
     union {
         Expr *ret_stmt; /* Return value */
         struct {
@@ -120,7 +120,7 @@ Expr *ast_build_integer_expr_node(long integer);
  * @operand: The node's unary operand.
  * Returns: The unary expression node.
  */
-Expr *ast_build_unary_expr_node(TokenType op, Expr *operand);
+Expr *ast_build_unary_expr_node(TokenKind op, Expr *operand);
 
 /**
  * ast_build_binary_expr_node - Builds a binary expression node.
@@ -129,7 +129,7 @@ Expr *ast_build_unary_expr_node(TokenType op, Expr *operand);
  * @right: The node's right operand.
  * Returns: The binary expression node.
  */
-Expr *ast_build_binary_expr_node(TokenType op, Expr *left, Expr *right);
+Expr *ast_build_binary_expr_node(TokenKind op, Expr *left, Expr *right);
 
 /**
  * ast_build_id_expr_node - Builds an identifier expression node.

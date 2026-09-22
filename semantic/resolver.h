@@ -2,7 +2,7 @@
 
 #include <symtbl.h>
 
-typedef struct Scope Scope;
+typedef struct Scope    Scope;
 typedef struct Resolver Resolver;
 
 typedef struct {

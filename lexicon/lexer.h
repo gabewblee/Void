@@ -43,10 +43,10 @@ typedef enum {
     TOKEN_GREATER,   /* >          */
     TOKEN_GEQ,       /* >=         */
     TOKEN_EOF        /* EOF        */
-} TokenType;
+} TokenKind;
 
 typedef struct {
-    TokenType type;  /* Token type   */
+    TokenKind kind;  /* Token kind   */
     char     *start; /* Token start  */
     int       len;   /* Token length */
     long      num;   /* Token number */

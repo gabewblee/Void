@@ -20,8 +20,8 @@ static void error(Parser *parser, const char *fmt, ...) {
     exit(EXIT_FAILURE);
 }
 
-static char *get_token_lexeme(TokenType type) {
-    switch (type) {
+static char *get_token_lexeme(TokenKind kind) {
+    switch (kind) {
     case TOKEN_ID:        return "identifier";
     case TOKEN_NUM:       return "number";
     case TOKEN_INT:       return "'int'";
@@ -73,9 +73,9 @@ static void advance(Parser *parser) {
     parser->lookahead = lexer_get_nxt_token(parser->lexer);
 }
 
-static void match(Parser *parser, TokenType type) {
-    if (parser->lookahead.type != type)
-        error(parser, "expected %s, got %s", get_token_lexeme(type), get_token_lexeme(parser->lookahead.type));
+static void match(Parser *parser, TokenKind kind) {
+    if (parser->lookahead.kind != kind)
+        error(parser, "expected %s, got %s", get_token_lexeme(kind), get_token_lexeme(parser->lookahead.kind));
     
     advance(parser);
 }
@@ -93,12 +93,12 @@ static void *grow(void *p, int *cap, size_t elem) {
 
 static Expr **parse_args(Parser *parser, int *argc) {
     Expr **args = NULL; int cap = 0;
-    while (parser->lookahead.type != TOKEN_RPAREN) {
+    while (parser->lookahead.kind != TOKEN_RPAREN) {
         if (*argc == cap)
             args = grow(args, &cap, sizeof(Expr *));
 
         args[(*argc)++] = parse_expr(parser);
-        if (parser->lookahead.type != TOKEN_COMMA)
+        if (parser->lookahead.kind != TOKEN_COMMA)
             break;
 
         match(parser, TOKEN_COMMA);
@@ -108,16 +108,16 @@ static Expr **parse_args(Parser *parser, int *argc) {
 
 static Expr *parse_primary_expr(Parser *parser) {
     /* primary_expr -> number | id("(" args ")")? | "(" expr ")" */
-    if (parser->lookahead.type == TOKEN_NUM) {
+    if (parser->lookahead.kind == TOKEN_NUM) {
         long num = parser->lookahead.num;
         match(parser, TOKEN_NUM);
         return ast_build_integer_expr_node(num);
     }
 
-    if (parser->lookahead.type == TOKEN_ID) {
+    if (parser->lookahead.kind == TOKEN_ID) {
         char *name = cp_token_lexeme(parser->lookahead);
         match(parser, TOKEN_ID);
-        if (parser->lookahead.type == TOKEN_LPAREN) {
+        if (parser->lookahead.kind == TOKEN_LPAREN) {
             match(parser, TOKEN_LPAREN);
             int argc = 0;
             Expr **args = parse_args(parser, &argc);
@@ -127,20 +127,20 @@ static Expr *parse_primary_expr(Parser *parser) {
         return ast_build_id_expr_node(name);
     }
 
-    if (parser->lookahead.type == TOKEN_LPAREN) {
+    if (parser->lookahead.kind == TOKEN_LPAREN) {
         match(parser, TOKEN_LPAREN);
         Expr *primary_expr = parse_expr(parser);
         match(parser, TOKEN_RPAREN);
         return primary_expr;
     }
 
-    error(parser, "expected expression, got %s", get_token_lexeme(parser->lookahead.type));
+    error(parser, "expected expression, got %s", get_token_lexeme(parser->lookahead.kind));
     return NULL;
 }
 
 static Expr *parse_unary_expr(Parser *parser) {
     /* unary_expr -> ("+" | "-" | "!") unary_expr | primary_expr */
-    TokenType op = parser->lookahead.type;
+    TokenKind op = parser->lookahead.kind;
     if (op == TOKEN_PLUS || op == TOKEN_MINUS || op == TOKEN_NOT) {
         match(parser, op);
         return ast_build_unary_expr_node(op, parse_unary_expr(parser));
@@ -152,9 +152,9 @@ static Expr *parse_unary_expr(Parser *parser) {
 static Expr *parse_multiplicative_expr(Parser *parser) {
     /* multiplicative_expr -> unary_expr (("*" | "/") unary_expr)* */
     Expr *left = parse_unary_expr(parser);
-    while (parser->lookahead.type == TOKEN_MULT || parser->lookahead.type == TOKEN_DIV) {
-        TokenType op = parser->lookahead.type;
-        match(parser, parser->lookahead.type);
+    while (parser->lookahead.kind == TOKEN_MULT || parser->lookahead.kind == TOKEN_DIV) {
+        TokenKind op = parser->lookahead.kind;
+        match(parser, parser->lookahead.kind);
         Expr *right = parse_unary_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
     }
@@ -165,8 +165,8 @@ static Expr *parse_multiplicative_expr(Parser *parser) {
 static Expr *parse_additive_expr(Parser *parser) {
     /* additive_expr -> multiplicative_expr (("+" | "-") multiplicative_expr)* */
     Expr *left = parse_multiplicative_expr(parser);
-    while (parser->lookahead.type == TOKEN_PLUS || parser->lookahead.type == TOKEN_MINUS) {
-        TokenType op = parser->lookahead.type;
+    while (parser->lookahead.kind == TOKEN_PLUS || parser->lookahead.kind == TOKEN_MINUS) {
+        TokenKind op = parser->lookahead.kind;
         match(parser, op);
         Expr *right = parse_multiplicative_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
@@ -178,12 +178,12 @@ static Expr *parse_additive_expr(Parser *parser) {
 static Expr *parse_relational_expr(Parser *parser) {
     /* relational_expr -> additive_expr (("<" | "<=" | ">" | ">=") additive_expr)* */
     Expr *left = parse_additive_expr(parser);
-    while (parser->lookahead.type == TOKEN_LESS    || 
-           parser->lookahead.type == TOKEN_LEQ     ||
-           parser->lookahead.type == TOKEN_GREATER ||
-           parser->lookahead.type == TOKEN_GEQ) {
-        TokenType op = parser->lookahead.type;
-        match(parser, parser->lookahead.type);
+    while (parser->lookahead.kind == TOKEN_LESS    || 
+           parser->lookahead.kind == TOKEN_LEQ     ||
+           parser->lookahead.kind == TOKEN_GREATER ||
+           parser->lookahead.kind == TOKEN_GEQ) {
+        TokenKind op = parser->lookahead.kind;
+        match(parser, parser->lookahead.kind);
         Expr *right = parse_additive_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
     }
@@ -194,9 +194,9 @@ static Expr *parse_relational_expr(Parser *parser) {
 static Expr *parse_equality_expr(Parser *parser) {
     /* equality_expr -> relational_expr (("==" | "!=") relational_expr)* */
     Expr *left = parse_relational_expr(parser);
-    while (parser->lookahead.type == TOKEN_EQEQ || parser->lookahead.type == TOKEN_NEQ) {
-        TokenType op = parser->lookahead.type;
-        match(parser, parser->lookahead.type);
+    while (parser->lookahead.kind == TOKEN_EQEQ || parser->lookahead.kind == TOKEN_NEQ) {
+        TokenKind op = parser->lookahead.kind;
+        match(parser, parser->lookahead.kind);
         Expr *right = parse_relational_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
     }
@@ -207,9 +207,9 @@ static Expr *parse_equality_expr(Parser *parser) {
 static Expr *parse_land_expr(Parser *parser) {
     /* land_expr -> equality_expr ("&&" equality_expr)* */
     Expr *left = parse_equality_expr(parser);
-    while (parser->lookahead.type == TOKEN_ANDAND) {
-        TokenType op = parser->lookahead.type;
-        match(parser, parser->lookahead.type);
+    while (parser->lookahead.kind == TOKEN_ANDAND) {
+        TokenKind op = parser->lookahead.kind;
+        match(parser, parser->lookahead.kind);
         Expr *right = parse_equality_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
     }
@@ -220,9 +220,9 @@ static Expr *parse_land_expr(Parser *parser) {
 static Expr *parse_lor_expr(Parser *parser) {
     /* lor_expr -> land_expr ("||" land_expr)* */
     Expr *left = parse_land_expr(parser);
-    while (parser->lookahead.type == TOKEN_OROR) {
-        TokenType op = parser->lookahead.type;
-        match(parser, parser->lookahead.type);
+    while (parser->lookahead.kind == TOKEN_OROR) {
+        TokenKind op = parser->lookahead.kind;
+        match(parser, parser->lookahead.kind);
         Expr *right = parse_land_expr(parser);
         left = ast_build_binary_expr_node(op, left, right);
     }
@@ -233,9 +233,9 @@ static Expr *parse_lor_expr(Parser *parser) {
 static Expr *parse_assign_expr(Parser *parser) {
     /* assign_expr -> lor_expr ("=" assign_expr)? */
     Expr *target = parse_lor_expr(parser);
-    if (parser->lookahead.type == TOKEN_EQ) {
-        if (target->type != EXPR_ID) {
-            switch (target->type) {
+    if (parser->lookahead.kind == TOKEN_EQ) {
+        if (target->kind != EXPR_ID) {
+            switch (target->kind) {
             case EXPR_INT:    error(parser, "cannot assign to a number");           break;
             case EXPR_CALL:   error(parser, "cannot assign to a function call");    break;
             case EXPR_UNARY:  error(parser, "cannot assign to a unary expression"); break;
@@ -271,7 +271,7 @@ static Stmt *parse_decl_stmt(Parser *parser) {
     Token id = parser->lookahead;
     match(parser, TOKEN_ID);
     char *name = cp_token_lexeme(id);
-    if (parser->lookahead.type == TOKEN_EQ) {
+    if (parser->lookahead.kind == TOKEN_EQ) {
         match(parser, TOKEN_EQ);
         Expr *initializer = parse_expr(parser);
         match(parser, TOKEN_SEMICOLON);
@@ -290,7 +290,7 @@ static Stmt *parse_if_stmt(Parser *parser) {
     match(parser, TOKEN_RPAREN);
     Stmt *then_branch = parse_stmt(parser);
     Stmt *else_branch = NULL;
-    if (parser->lookahead.type == TOKEN_ELSE) {
+    if (parser->lookahead.kind == TOKEN_ELSE) {
         match(parser, TOKEN_ELSE);
         else_branch = parse_stmt(parser);
     }
@@ -314,7 +314,7 @@ static Stmt *parse_while_stmt(Parser *parser) {
 
 static Stmt *parse_for_init(Parser *parser) {
     /* for_init -> decl_stmt | expr_stmt */
-    return parser->lookahead.type == TOKEN_INT ? parse_decl_stmt(parser) : parse_expr_stmt(parser);
+    return parser->lookahead.kind == TOKEN_INT ? parse_decl_stmt(parser) : parse_expr_stmt(parser);
 }
 
 static Stmt *parse_for_stmt(Parser *parser) {
@@ -353,7 +353,7 @@ static Stmt *parse_expr_stmt(Parser *parser) {
 
 static Stmt *parse_stmt(Parser *parser) {
     /* stmt -> ret_stmt | decl_stmt | if_stmt | block_stmt | while_stmt | for_stmt | break_stmt | continue_stmt | expr_stmt */
-    switch (parser->lookahead.type) {
+    switch (parser->lookahead.kind) {
     case TOKEN_RET:      return parse_ret_stmt(parser);
     case TOKEN_INT:      return parse_decl_stmt(parser);
     case TOKEN_IF:       return parse_if_stmt(parser);
@@ -371,8 +371,8 @@ static Block *parse_block(Parser *parser) {
     match(parser, TOKEN_LBRACE);
 
     Stmt **stmts = NULL; int stmtc = 0, cap = 0;
-    while (parser->lookahead.type != TOKEN_RBRACE) {
-        if (parser->lookahead.type == TOKEN_EOF)
+    while (parser->lookahead.kind != TOKEN_RBRACE) {
+        if (parser->lookahead.kind == TOKEN_EOF)
             error(parser, "expected '}' before EOF");
 
         if (stmtc == cap)
@@ -388,7 +388,7 @@ static Block *parse_block(Parser *parser) {
 static char **parse_params(Parser *parser, int *paramc) {
     /* params -> ("int" id ("," "int" id)*)? */
     char **params = NULL; int cap = 0;
-    while (parser->lookahead.type != TOKEN_RPAREN) {
+    while (parser->lookahead.kind != TOKEN_RPAREN) {
         match(parser, TOKEN_INT);
         Token id = parser->lookahead;
         match(parser, TOKEN_ID);
@@ -396,7 +396,7 @@ static char **parse_params(Parser *parser, int *paramc) {
             params = grow(params, &cap, sizeof(char *));
 
         params[(*paramc)++] = cp_token_lexeme(id);
-        if (parser->lookahead.type != TOKEN_COMMA)
+        if (parser->lookahead.kind != TOKEN_COMMA)
             break;
 
         match(parser, TOKEN_COMMA);
@@ -418,7 +418,7 @@ static Function *parse_function(Parser *parser) {
     match(parser, TOKEN_RPAREN);
 
     /* ";" indicates declaration */
-    if (parser->lookahead.type == TOKEN_SEMICOLON) {
+    if (parser->lookahead.kind == TOKEN_SEMICOLON) {
         match(parser, TOKEN_SEMICOLON);
         return ast_build_function_node(name, params, paramc, NULL);
     }
@@ -431,7 +431,7 @@ static Function *parse_function(Parser *parser) {
 Program *parse(Parser *parser) {
     /* program -> function* EOF */
     Function **functions = NULL; int functionc = 0, cap = 0;
-    while (parser->lookahead.type != TOKEN_EOF) {
+    while (parser->lookahead.kind != TOKEN_EOF) {
         if (functionc == cap)
             functions = grow(functions, &cap, sizeof(Function *));
         

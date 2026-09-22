@@ -8,12 +8,12 @@ typedef struct Function Function;
 typedef enum {
     SYMBOL_VAR, /* Variable */
     SYMBOL_FUNC /* Function */
-} SymbolType;
+} SymbolKind;
 
 typedef struct {
     int        offset;   /* Variable stack offset from rbp */
     char      *name;     /* Symbol name                    */
-    SymbolType type;     /* Symbol type                    */
+    SymbolKind kind;     /* Symbol kind                    */
 
     /* Function fields*/
     int        paramc;   /* Function parameter count       */

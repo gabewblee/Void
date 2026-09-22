@@ -16,21 +16,21 @@ static void error(char *fmt, ...) {
     exit(EXIT_FAILURE);
 }
 
-static Expr *ast_build_expr_node(ExprType type) {
+static Expr *ast_build_expr_node(ExprKind kind) {
     Expr *expr = malloc(sizeof(Expr));
     if (!expr)
         error("out of memory");
 
-    expr->type = type;
+    expr->kind = kind;
     return expr;
 }
 
-static Stmt *ast_build_stmt_node(StmtType type) {
+static Stmt *ast_build_stmt_node(StmtKind kind) {
     Stmt *stmt = malloc(sizeof(Stmt));
     if (!stmt)
         error("out of memory");
 
-    stmt->type = type;
+    stmt->kind = kind;
     return stmt;
 }
 
@@ -45,7 +45,7 @@ static void ast_free_expr_node(Expr *expr) {
     if (!expr)
         return;
 
-    switch (expr->type) {
+    switch (expr->kind) {
         case EXPR_INT:
             break;
         case EXPR_UNARY:
@@ -69,7 +69,7 @@ static void ast_free_expr_node(Expr *expr) {
             free(expr->call.args);
             break;
         default:
-            error("internal error: unknown expression type %d", expr->type);
+            error("internal error: unknown expression kind %d", expr->kind);
     }
 
     free(expr);
@@ -128,7 +128,7 @@ static void ast_free_stmt_node(Stmt *stmt) {
     if (!stmt)
         return;
 
-    switch (stmt->type) {
+    switch (stmt->kind) {
     case STMT_RETURN:
         ast_free_ret_stmt_node(stmt);
         break;
@@ -154,7 +154,7 @@ static void ast_free_stmt_node(Stmt *stmt) {
     case STMT_CONTINUE:
         break;
     default:
-        error("internal error: unknown statement type %d", stmt->type);
+        error("internal error: unknown statement kind %d", stmt->kind);
     }
     
     free(stmt);
@@ -190,14 +190,14 @@ Expr *ast_build_integer_expr_node(long integer) {
     return expr;
 }
 
-Expr *ast_build_unary_expr_node(TokenType op, Expr *operand) {
+Expr *ast_build_unary_expr_node(TokenKind op, Expr *operand) {
     Expr *expr = ast_build_expr_node(EXPR_UNARY);
     expr->unary.op      = op;
     expr->unary.operand = operand;
     return expr;
 }
 
-Expr *ast_build_binary_expr_node(TokenType op, Expr *left, Expr *right) {
+Expr *ast_build_binary_expr_node(TokenKind op, Expr *left, Expr *right) {
     Expr *expr = ast_build_expr_node(EXPR_BINARY);
     expr->binary.op    = op;
     expr->binary.left  = left;

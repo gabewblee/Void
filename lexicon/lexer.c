@@ -6,7 +6,7 @@
 
 typedef struct {
     char     *lexeme; /* Symbol lexeme */
-    TokenType type;   /* Symbol type   */
+    TokenKind kind;   /* Symbol kind   */
 } Symbol;
 
 static const Symbol symbols[] = {
@@ -47,9 +47,9 @@ static inline void advance(Lexer *lexer) {
     lexer->peek++;
 }
 
-static inline Token tokenize(TokenType type, char *start, int len, int line, int col) {
+static inline Token tokenize(TokenKind kind, char *start, int len, int line, int col) {
     return (Token){
-        .type  = type,
+        .kind  = kind,
         .start = start,
         .len   = len,
         .line  = line,
@@ -57,7 +57,7 @@ static inline Token tokenize(TokenType type, char *start, int len, int line, int
     };
 }
 
-static inline TokenType match(char* s, int len) {
+static inline TokenKind match(char* s, int len) {
     switch (len) {
     case 2:
         if (!memcmp(s, "if", 2)) return TOKEN_IF;
@@ -125,7 +125,7 @@ static inline Token handle_symbol(Lexer *lexer) {
             for (size_t j = 0; j < len; j++)
                 advance(lexer);
 
-            return tokenize(symbols[i].type, start, (int)len, line, col);
+            return tokenize(symbols[i].kind, start, (int)len, line, col);
         }
     }
 

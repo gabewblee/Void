@@ -72,7 +72,7 @@ static SymbolId resolve_symbol(Resolver *resolver, char *name) {
 }
 
 static void resolve_expr(Resolver *resolver, Expr *expr) {
-    switch (expr->type) {
+    switch (expr->kind) {
     case EXPR_INT:
         return;
     case EXPR_UNARY:
@@ -91,7 +91,7 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         return;
     }
     case EXPR_ASSIGN: {
-        switch (expr->assign.target->type) {
+        switch (expr->assign.target->kind) {
         case EXPR_ID:                                                   break;
         case EXPR_INT:    error("cannot assign to a number");           break;
         case EXPR_CALL:   error("cannot assign to a function call");    break;
@@ -121,12 +121,12 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         return;
     }
     default:
-        error("internal error: unknown expression type %d", expr->type);
+        error("internal error: unknown expression kind %d", expr->kind);
     }
 }
 
 static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
-    switch (stmt->type) {
+    switch (stmt->kind) {
     case STMT_RETURN:
         resolve_expr(resolver, stmt->ret_stmt);
         return;
@@ -136,7 +136,7 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
 
         Symbol symbol = {
             .name   = stmt->decl_stmt.name,
-            .type   = SYMBOL_VAR,
+            .kind   = SYMBOL_VAR,
             .offset = resolver->offset,
         };
         SymbolId id = symbol_add(&resolver->symbols, symbol);
@@ -174,7 +174,7 @@ static void resolve_stmt(Resolver *resolver, Stmt *stmt) {
         resolve_expr(resolver, stmt->expr_stmt);
         return;
     default:
-        error("internal error: unknown statement type %d", stmt->type);
+        error("internal error: unknown statement kind %d", stmt->kind);
     }
 }
 
@@ -190,7 +190,7 @@ static void resolve_function_decl(Resolver *resolver, Function *function) {
     if (id == SYMBOL_INVALID) {
         Symbol symbol = {
             .name     = function->name,
-            .type     = SYMBOL_FUNC,
+            .kind     = SYMBOL_FUNC,
             .function = function,
             .paramc   = function->paramc,
         };
@@ -223,7 +223,7 @@ static void resolve_function_body(Resolver *resolver, Function *function) {
 
         Symbol symbol = {
             .name   = function->params[i],
-            .type   = SYMBOL_VAR,
+            .kind   = SYMBOL_VAR,
             .offset = resolver->offset,
         };
         SymbolId id = symbol_add(&resolver->symbols, symbol);

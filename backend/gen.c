@@ -33,7 +33,7 @@ static int gen_label() {
 
 /* The invariant for expressions is that results are placed in rax */
 static void gen_expr(FILE *out, Expr *expr) {
-    switch (expr->type) {
+    switch (expr->kind) {
     case EXPR_INT:
         /*
          *     mov eax
@@ -287,7 +287,7 @@ static void gen_expr(FILE *out, Expr *expr) {
         return;
     }
     default:
-        error("internal error: unknown expression type %d", expr->type);
+        error("internal error: unknown expression kind %d", expr->kind);
     }
 }
 
@@ -434,7 +434,7 @@ static void gen_expr_stmt(FILE *out, Stmt *stmt) {
 }
 
 static void gen_stmt(FILE *out, Stmt *stmt) {
-    switch (stmt->type) {
+    switch (stmt->kind) {
     case STMT_RETURN:   gen_ret_stmt(out, stmt);                                        return;
     case STMT_DECL:     gen_decl_stmt(out, stmt);                                       return;
     case STMT_IF:       gen_if_stmt(out, stmt);                                         return;
@@ -444,7 +444,7 @@ static void gen_stmt(FILE *out, Stmt *stmt) {
     case STMT_BREAK:    gen_break_stmt(out);                                            return;
     case STMT_CONTINUE: gen_continue_stmt(out);                                         return;
     case STMT_EXPR:     gen_expr_stmt(out, stmt);                                       return;
-    default:            error("internal error: unknown statement type %d", stmt->type); return;
+    default:            error("internal error: unknown statement kind %d", stmt->kind); return;
     }
 }
 
