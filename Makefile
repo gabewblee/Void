@@ -4,6 +4,7 @@ SRC    = backend/gen.c       \
          lexicon/lexer.c     \
          semantic/resolver.c \
          semantic/symtbl.c   \
+         semantic/type.c     \
          syntax/ast.c        \
          syntax/parser.c     \
          main.c

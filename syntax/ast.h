@@ -21,30 +21,30 @@ typedef struct Program  Program;
 struct Expr {
     ExprKind kind; /* Expression kind */
     union {
-        long integer; /* Expression integer */
+        long int_expr; /* Expression integer */
         struct {
             TokenKind op;      /* Unary operation */
             Expr*     operand; /* Unary operand   */
-        } unary;
+        } unary_expr;
         struct {
             TokenKind op;    /* Binary operation */
             Expr*     left;  /* Left operand     */
             Expr*     right; /* Right operand    */
-        } binary;
+        } binary_expr;
         struct {
             char    *name;   /* Identifier name */
             SymbolId symbol; /* Variable symbol */
-        } id;
+        } id_expr;
         struct {
             Expr *target; /* Assignment target */
             Expr *val;    /* Assignment value  */
-        } assign;
+        } assign_expr;
         struct {
             char    *name;   /* Function name           */
             Expr   **args;   /* Function arguments      */
             int      argc;   /* Function argument count */
             SymbolId symbol; /* Function symbol         */
-        } call;
+        } call_expr;
     };
 };
 
@@ -91,7 +91,7 @@ struct Stmt {
 
 struct Block {
     Stmt **stmts; /* Statement list  */
-    int    stmtc;   /* Statement count */
+    int    stmtc; /* Statement count */
 };
 
 struct Function {

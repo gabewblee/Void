@@ -76,22 +76,22 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
     case EXPR_INT:
         return;
     case EXPR_UNARY:
-        resolve_expr(resolver, expr->unary.operand);
+        resolve_expr(resolver, expr->unary_expr.operand);
         return;
     case EXPR_BINARY:
-        resolve_expr(resolver, expr->binary.left);
-        resolve_expr(resolver, expr->binary.right);
+        resolve_expr(resolver, expr->binary_expr.left);
+        resolve_expr(resolver, expr->binary_expr.right);
         return;
     case EXPR_ID: {
-        SymbolId id = resolve_symbol(resolver, expr->id.name);
+        SymbolId id = resolve_symbol(resolver, expr->id_expr.name);
         if (id == SYMBOL_INVALID)
-            error("undeclared identifier '%s'", expr->id.name);
+            error("undeclared identifier '%s'", expr->id_expr.name);
 
-        expr->id.symbol = id;
+        expr->id_expr.symbol = id;
         return;
     }
     case EXPR_ASSIGN: {
-        switch (expr->assign.target->kind) {
+        switch (expr->assign_expr.target->kind) {
         case EXPR_ID:                                                   break;
         case EXPR_INT:    error("cannot assign to a number");           break;
         case EXPR_CALL:   error("cannot assign to a function call");    break;
@@ -101,23 +101,23 @@ static void resolve_expr(Resolver *resolver, Expr *expr) {
         default:          error("cannot assign to this expression");    break;
         }
 
-        resolve_expr(resolver, expr->assign.target);
-        resolve_expr(resolver, expr->assign.val);
+        resolve_expr(resolver, expr->assign_expr.target);
+        resolve_expr(resolver, expr->assign_expr.val);
         return;
     }
     case EXPR_CALL: {
-        SymbolId id = scope_find(&resolver->functions, expr->call.name);
+        SymbolId id = scope_find(&resolver->functions, expr->call_expr.name);
         if (id == SYMBOL_INVALID)
-            error("undeclared function '%s'", expr->call.name);
+            error("undeclared function '%s'", expr->call_expr.name);
 
         int paramc = symbol_get(&resolver->symbols, id)->paramc;
-        if (expr->call.argc != paramc)
-            error("'%s' expected %d arguments, got %d arguments", expr->call.name, paramc, expr->call.argc);
+        if (expr->call_expr.argc != paramc)
+            error("'%s' expected %d arguments, got %d arguments", expr->call_expr.name, paramc, expr->call_expr.argc);
 
-        for (int i = 0; i < expr->call.argc; i++)
-            resolve_expr(resolver, expr->call.args[i]);
+        for (int i = 0; i < expr->call_expr.argc; i++)
+            resolve_expr(resolver, expr->call_expr.args[i]);
 
-        expr->call.symbol = id;
+        expr->call_expr.symbol = id;
         return;
     }
     default:

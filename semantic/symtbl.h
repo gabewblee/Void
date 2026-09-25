@@ -35,15 +35,15 @@ typedef struct {
 SymbolId symbol_add(SymbolTable *table, Symbol symbol);
 
 /**
- * symbol_get - Gets the symbol @id from @table.
- * @table: The symbol table to get from.
+ * symbol_get - Reads the symbol @id from @table.
+ * @table: The symbol table to read from.
  * @id: The symbol index.
- * Returns: The symbol @id.
+ * Returns: The symbol @id from @table.
  */
 Symbol *symbol_get(SymbolTable *table, SymbolId id);
 
 /**
-* symbol_table_free - Frees @table.
+* symbol_table_free - Frees @table's allocated memory.
 * @table: The symbol table to free.
 */
 void symbol_table_free(SymbolTable *table);

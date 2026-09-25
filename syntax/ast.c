@@ -49,24 +49,24 @@ static void ast_free_expr_node(Expr *expr) {
         case EXPR_INT:
             break;
         case EXPR_UNARY:
-            ast_free_expr_node(expr->unary.operand);
+            ast_free_expr_node(expr->unary_expr.operand);
             break;
         case EXPR_BINARY:
-            ast_free_expr_node(expr->binary.left);
-            ast_free_expr_node(expr->binary.right);
+            ast_free_expr_node(expr->binary_expr.left);
+            ast_free_expr_node(expr->binary_expr.right);
             break;
         case EXPR_ID:
-            ast_free_name(expr->id.name);
+            ast_free_name(expr->id_expr.name);
             break;
         case EXPR_ASSIGN:
-            ast_free_expr_node(expr->assign.target);
-            ast_free_expr_node(expr->assign.val);
+            ast_free_expr_node(expr->assign_expr.target);
+            ast_free_expr_node(expr->assign_expr.val);
             break;
         case EXPR_CALL:
-            ast_free_name(expr->call.name);
-            for (int i = 0; i < expr->call.argc; i++)
-                ast_free_expr_node(expr->call.args[i]);
-            free(expr->call.args);
+            ast_free_name(expr->call_expr.name);
+            for (int i = 0; i < expr->call_expr.argc; i++)
+                ast_free_expr_node(expr->call_expr.args[i]);
+            free(expr->call_expr.args);
             break;
         default:
             error("internal error: unknown expression kind %d", expr->kind);
@@ -186,45 +186,45 @@ static void ast_free_function_node(Function *function) {
 
 Expr *ast_build_integer_expr_node(long integer) {
     Expr *expr = ast_build_expr_node(EXPR_INT);
-    expr->integer = integer;
+    expr->int_expr = integer;
     return expr;
 }
 
 Expr *ast_build_unary_expr_node(TokenKind op, Expr *operand) {
     Expr *expr = ast_build_expr_node(EXPR_UNARY);
-    expr->unary.op      = op;
-    expr->unary.operand = operand;
+    expr->unary_expr.op      = op;
+    expr->unary_expr.operand = operand;
     return expr;
 }
 
 Expr *ast_build_binary_expr_node(TokenKind op, Expr *left, Expr *right) {
     Expr *expr = ast_build_expr_node(EXPR_BINARY);
-    expr->binary.op    = op;
-    expr->binary.left  = left;
-    expr->binary.right = right;
+    expr->binary_expr.op    = op;
+    expr->binary_expr.left  = left;
+    expr->binary_expr.right = right;
     return expr;
 }
 
 Expr *ast_build_id_expr_node(char *name) {
     Expr *expr = ast_build_expr_node(EXPR_ID);
-    expr->id.name   = name;
-    expr->id.symbol = SYMBOL_INVALID;
+    expr->id_expr.name   = name;
+    expr->id_expr.symbol = SYMBOL_INVALID;
     return expr;
 }
 
 Expr *ast_build_assign_expr_node(Expr *target, Expr *val) {
     Expr *expr = ast_build_expr_node(EXPR_ASSIGN);
-    expr->assign.target = target;
-    expr->assign.val    = val;
+    expr->assign_expr.target = target;
+    expr->assign_expr.val    = val;
     return expr;
 }
 
 Expr *ast_build_call_expr_node(char *name, Expr **args, int argc) {
     Expr *expr = ast_build_expr_node(EXPR_CALL);
-    expr->call.name   = name;
-    expr->call.args   = args;
-    expr->call.argc   = argc;
-    expr->call.symbol = SYMBOL_INVALID;
+    expr->call_expr.name   = name;
+    expr->call_expr.args   = args;
+    expr->call_expr.argc   = argc;
+    expr->call_expr.symbol = SYMBOL_INVALID;
     return expr;
 }
 

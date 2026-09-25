@@ -38,14 +38,14 @@ static void gen_expr(FILE *out, Expr *expr) {
         /*
          *     mov eax
          */
-        fprintf(out, "    mov eax, %ld\n", expr->integer);
+        fprintf(out, "    mov eax, %ld\n", expr->int_expr);
         return;
     case EXPR_UNARY:
         /*
-         * gen_expr(out, expr->unary.operand)
+         * gen_expr(out, expr->unary_expr.operand)
          */
-        gen_expr(out, expr->unary.operand);
-        switch (expr->unary.op) {
+        gen_expr(out, expr->unary_expr.operand);
+        switch (expr->unary_expr.op) {
         case TOKEN_PLUS:
             return;
         case TOKEN_MINUS:
@@ -65,17 +65,17 @@ static void gen_expr(FILE *out, Expr *expr) {
             fprintf(out, "    movzx eax, al\n");
             return;
         default:
-            error("internal error: unsupported unary operator %d", expr->unary.op);
+            error("internal error: unsupported unary_expr operator %d", expr->unary_expr.op);
         }
         return;
     case EXPR_BINARY:
-        switch (expr->binary.op) {
+        switch (expr->binary_expr.op) {
         case TOKEN_ANDAND: {
             /*
-            * gen_expr(out, expr->binary.left)
+            * gen_expr(out, expr->binary_expr.left)
             *     test eax, eax
             *     je .Lfalse
-            * gen_expr(out, expr->binary.right)
+            * gen_expr(out, expr->binary_expr.right)
             *     test eax, eax
             *     je .Lfalse
             *     mov eax, 1
@@ -85,10 +85,10 @@ static void gen_expr(FILE *out, Expr *expr) {
             * .Ldonelabel:
             */
             int label = gen_label();
-            gen_expr(out, expr->binary.left);
+            gen_expr(out, expr->binary_expr.left);
             fprintf(out, "    test eax, eax\n");
             fprintf(out, "    je .Lfalse%d\n", label);
-            gen_expr(out, expr->binary.right);
+            gen_expr(out, expr->binary_expr.right);
             fprintf(out, "    test eax, eax\n");
             fprintf(out, "    je .Lfalse%d\n", label);
             fprintf(out, "    mov eax, 1\n");
@@ -99,10 +99,10 @@ static void gen_expr(FILE *out, Expr *expr) {
             return;
         } case TOKEN_OROR: {
             /*
-            * gen_expr(out, expr->binary.left)
+            * gen_expr(out, expr->binary_expr.left)
             *     test eax, eax
             *     jne .Ltrue
-            * gen_expr(out, expr->binary.right)
+            * gen_expr(out, expr->binary_expr.right)
             *     test eax, eax
             *     jne .Ltrue
             *     mov eax, 0
@@ -112,10 +112,10 @@ static void gen_expr(FILE *out, Expr *expr) {
             * .Ldonelabel:
             */
             int label = gen_label();
-            gen_expr(out, expr->binary.left);
+            gen_expr(out, expr->binary_expr.left);
             fprintf(out, "    test eax, eax\n");
             fprintf(out, "    jne .Ltrue%d\n", label);
-            gen_expr(out, expr->binary.right);
+            gen_expr(out, expr->binary_expr.right);
             fprintf(out, "    test eax, eax\n");
             fprintf(out, "    jne .Ltrue%d\n", label);
             fprintf(out, "    mov eax, 0\n");
@@ -129,19 +129,19 @@ static void gen_expr(FILE *out, Expr *expr) {
         }
 
         /*
-         * gen_expr(out, expr->binary.left)
+         * gen_expr(out, expr->binary_expr.left)
          *     push rax
          *
-         * gen_expr(out, expr->binary.right)
+         * gen_expr(out, expr->binary_expr.right)
          *     pop rcx
          */
-        gen_expr(out, expr->binary.left);
+        gen_expr(out, expr->binary_expr.left);
         fprintf(out, "    push rax\n");
 
-        gen_expr(out, expr->binary.right);
+        gen_expr(out, expr->binary_expr.right);
         fprintf(out, "    pop rcx\n");
 
-        switch (expr->binary.op) {
+        switch (expr->binary_expr.op) {
         case TOKEN_PLUS:
             /*
              *    add eax, ecx
@@ -235,22 +235,22 @@ static void gen_expr(FILE *out, Expr *expr) {
             fprintf(out, "    movzx eax, al\n");
             return;
         default:
-            error("internal error: unsupported binary operator %d", expr->binary.op);
+            error("internal error: unsupported binary operator %d", expr->binary_expr.op);
         }
         return;
     case EXPR_ID:
         /*
          *     mov eax, dword [rbp+offset]
          */
-        fprintf(out, "    mov eax, dword [rbp%+d]\n", symbol_get(symbols, expr->id.symbol)->offset);
+        fprintf(out, "    mov eax, dword [rbp%+d]\n", symbol_get(symbols, expr->id_expr.symbol)->offset);
         return;
     case EXPR_ASSIGN:
         /*
-         * gen_expr(out, expr->assign.val)
+         * gen_expr(out, expr->assign_expr.val)
          *     mov dword [rbp+offset], eax
          */
-        gen_expr(out, expr->assign.val);
-        fprintf(out, "    mov dword [rbp%+d], eax\n", symbol_get(symbols, expr->assign.target->id.symbol)->offset);
+        gen_expr(out, expr->assign_expr.val);
+        fprintf(out, "    mov dword [rbp%+d], eax\n", symbol_get(symbols, expr->assign_expr.target->id_expr.symbol)->offset);
         return;
     case EXPR_CALL: {
         /*
@@ -265,12 +265,12 @@ static void gen_expr(FILE *out, Expr *expr) {
          *     add rsp, r11
          */
         static const char *argregs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
-        int argc = expr->call.argc;
+        int argc = expr->call_expr.argc;
         if (argc > 6)
-            error("calls to '%s' with more than 6 arguments are unsupported", expr->call.name);
+            error("calls to '%s' with more than 6 arguments are unsupported", expr->call_expr.name);
 
         for (int i = 0; i < argc; i++) {
-            gen_expr(out, expr->call.args[i]);
+            gen_expr(out, expr->call_expr.args[i]);
             fprintf(out, "    push rax\n");
         }
 
@@ -281,7 +281,7 @@ static void gen_expr(FILE *out, Expr *expr) {
         fprintf(out, "    and r11, 15\n");
         fprintf(out, "    mov [rbp-%d], r11\n", stack);
         fprintf(out, "    sub rsp, r11\n");
-        fprintf(out, "    call %s\n", symbol_get(symbols, expr->call.symbol)->function->name);
+        fprintf(out, "    call %s\n", symbol_get(symbols, expr->call_expr.symbol)->function->name);
         fprintf(out, "    mov r11, [rbp-%d]\n", stack);
         fprintf(out, "    add rsp, r11\n");
         return;
